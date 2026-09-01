@@ -2,7 +2,7 @@
 
 Expose local TCP ports (8080, 8443, or all) to remote peers through userspace tunnels without altering firewall or routing tables.
 
-> **OpenTUI Mapping**: Tab 02 (`PortsView`) | **Cordis Route**: `/?tab=ports`  
+> **OpenTUI Mapping**: Tab 02 | **Cordis Route**: `/?tab=ports`  
 > **Interactive Archify Visualizer**: [`docs/features/core/diagrams/web-arch.html`](../features/core/diagrams/web-arch.html) · [🌐 Live HTMLPreview](https://htmlpreview.github.io/?https://github.com/abdshomad/tailcat-tui-with-opentui/blob/main/docs/features/core/diagrams/web-arch.html)
 
 ```mermaid

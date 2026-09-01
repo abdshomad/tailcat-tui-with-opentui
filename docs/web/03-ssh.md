@@ -2,7 +2,7 @@
 
 Userspace SSH daemon providing auth-free or WireGuard-ACL protected remote terminal access without inbound firewall holes.
 
-> **OpenTUI Mapping**: Tab 03 (`SSHView`) | **Cordis Route**: `/?tab=ssh`  
+> **OpenTUI Mapping**: Tab 03 | **Cordis Route**: `/?tab=ssh`  
 > **Interactive Archify Visualizer**: [`docs/features/core/diagrams/web-arch.html`](../features/core/diagrams/web-arch.html) · [🌐 Live HTMLPreview](https://htmlpreview.github.io/?https://github.com/abdshomad/tailcat-tui-with-opentui/blob/main/docs/features/core/diagrams/web-arch.html)
 
 ```mermaid

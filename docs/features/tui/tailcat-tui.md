@@ -54,7 +54,7 @@ flowchart TD
 ```
 
 
-- Cordis micro-kernel hosting `TailcatService`, `PluginManagerService`, and dynamic extension plugins.
+- [Cordis](https://github.com/cordiverse/cordis) micro-kernel hosting `TailcatService`, `PluginManagerService`, and dynamic extension plugins.
 - OpenTUI 8-tab dashboard covering all `tailcat/README.md` interactions:
   - Tab 1: Pipe / Stream (Server listener, client payload sender).
   - Tab 2: Ports (Serve local ports, dial remote ports).

@@ -2,7 +2,7 @@
 
 Secure drop box receiver (`tailcat recv /inbox`) accepting encrypted file uploads via SCP / SFTP.
 
-> **OpenTUI Mapping**: Tab 04 (`FilesView`) | **Cordis Route**: `/?tab=files`  
+> **OpenTUI Mapping**: Tab 04 | **Cordis Route**: `/?tab=files`  
 > **Interactive Archify Visualizer**: [`docs/features/core/diagrams/web-arch.html`](../features/core/diagrams/web-arch.html) · [🌐 Live HTMLPreview](https://htmlpreview.github.io/?https://github.com/abdshomad/tailcat-tui-with-opentui/blob/main/docs/features/core/diagrams/web-arch.html)
 
 ```mermaid

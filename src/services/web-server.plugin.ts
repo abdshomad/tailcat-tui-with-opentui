@@ -88,6 +88,45 @@ export class TailcatWebPlugin extends Service {
       return;
     }
 
+    if (url.pathname === '/api/status') {
+      const metrics = (this.ctx as any).metricsCollector;
+      const pluginMgr = (this.ctx as any).pluginManager;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify({
+        status: this.getStatus(),
+        port: this.port,
+        running: this.running,
+        daemon: DaemonManager.isDaemonRunning(),
+        daemonPid: DaemonManager.getDaemonPid(),
+        binary: tailcat ? tailcat.getBinaryInfo() : { available: false, source: 'unknown' },
+        plugins: pluginMgr ? pluginMgr.listPlugins().map((p: any) => p.name) : []
+      }));
+      return;
+    }
+
+    if (url.pathname === '/api/metrics') {
+      const metrics = (this.ctx as any).metricsCollector;
+      res.writeHead(200, { 'Content-Type': 'application/json' });
+      res.end(JSON.stringify(metrics ? metrics.getMetricsSummary() : { trackedPeers: 0, totalPings: 0 }));
+      return;
+    }
+
+    if (url.pathname === '/api/action' && req.method === 'POST') {
+      let body = '';
+      req.on('data', chunk => { body += chunk; });
+      req.on('end', () => {
+        try {
+          const payload = body ? JSON.parse(body) : {};
+          res.writeHead(200, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: true, action: payload.action || 'noop', received: payload }));
+        } catch (err: any) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ success: false, error: err?.message || 'Invalid JSON' }));
+        }
+      });
+      return;
+    }
+
     const html = this.renderWebDashboard(activeTab, tailcat);
     res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
     res.end(html);

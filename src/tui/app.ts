@@ -262,4 +262,12 @@ export class TailcatTUIApp {
 
     this.render();
   }
+
+  public getState(): AppState {
+    return this.state;
+  }
+
+  public setState(patch: Partial<AppState>): void {
+    this.state = { ...this.state, ...patch };
+  }
 }

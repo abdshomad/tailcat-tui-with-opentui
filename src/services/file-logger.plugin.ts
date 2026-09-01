@@ -31,6 +31,17 @@ export class FileLoggerPlugin extends Service {
     return this.logDir;
   }
 
+  public setLogDir(dir: string): void {
+    this.logDir = dir;
+    if (!existsSync(this.logDir)) {
+      mkdirSync(this.logDir, { recursive: true });
+    }
+  }
+
+  public getSessionLogPath(sessionId: string): string {
+    return resolve(this.logDir, `session-${sessionId}.log`);
+  }
+
   public getActiveLogsCount(): number {
     return this.activeLogsCount;
   }

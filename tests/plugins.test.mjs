@@ -84,4 +84,84 @@ test('Cordis Plugin Registry and Dynamic Lifecycle Management', async (t) => {
     assert.equal(disabledNow, false);
     assert.equal(ctx.pluginManager.isPluginEnabled('fileLogger'), false);
   });
+
+  await t.test('FileLogger custom directory and session log path resolution', () => {
+    ctx.pluginManager.enablePlugin('fileLogger', false);
+    const customDir = '/tmp/tailcat-test-logs';
+    ctx.fileLogger.setLogDir(customDir);
+    assert.equal(ctx.fileLogger.getLogDir(), customDir);
+    const sessionLogPath = ctx.fileLogger.getSessionLogPath('session-abc');
+    assert.ok(sessionLogPath.includes('session-session-abc.log'));
+
+    // Emit log to test write
+    ctx.emit('tailcat/session-log', {
+      session: { id: 'session-abc' },
+      text: 'custom log line test',
+    });
+    assert.ok(ctx.fileLogger.getActiveLogsCount() > 0);
+  });
+
+  await t.test('MetricsCollector multi-peer aggregation, percentiles, and reset', () => {
+    ctx.pluginManager.enablePlugin('metricsCollector', false);
+    ctx.metricsCollector.resetMetrics();
+
+    ctx.emit('tailcat/session-log', {
+      session: { id: 'peer-1' },
+      text: 'pong in 2.0ms via DERP(sfo)',
+    });
+    ctx.emit('tailcat/session-log', {
+      session: { id: 'peer-2' },
+      text: 'pong in 4.0ms via 192.168.1.5:41641',
+    });
+
+    const summary = ctx.metricsCollector.getMetricsSummary();
+    assert.equal(summary.totalPings, 2);
+    assert.equal(summary.trackedPeers, 2);
+    assert.equal(summary.avgLatencyMs, 3.0);
+
+    const all = ctx.metricsCollector.getAllMetrics();
+    assert.equal(all['peer-1'].relayType, 'DERP');
+    assert.equal(all['peer-2'].relayType, 'Direct');
+
+    ctx.metricsCollector.resetMetrics();
+    assert.equal(ctx.metricsCollector.getMetricsSummary().totalPings, 0);
+    assert.equal(ctx.metricsCollector.getMetricsSummary().trackedPeers, 0);
+  });
+
+  await t.test('TailcatWebPlugin exposes REST API endpoints (/api/status, /api/metrics, /api/sessions, /api/action)', async () => {
+    ctx.pluginManager.enablePlugin('webServer', false);
+    const port = await ctx.webServer.listenAuto(3985, true);
+
+    // 1. Test /api/status
+    const statusRes = await fetch(`http://127.0.0.1:${port}/api/status`);
+    assert.equal(statusRes.status, 200);
+    const statusJson = await statusRes.json();
+    assert.equal(statusJson.status, 'online');
+    assert.equal(statusJson.port, port);
+
+    // 2. Test /api/metrics
+    const metricsRes = await fetch(`http://127.0.0.1:${port}/api/metrics`);
+    assert.equal(metricsRes.status, 200);
+    const metricsJson = await metricsRes.json();
+    assert.ok(typeof metricsJson.totalPings === 'number');
+
+    // 3. Test /api/sessions
+    const sessionsRes = await fetch(`http://127.0.0.1:${port}/api/sessions`);
+    assert.equal(sessionsRes.status, 200);
+    const sessionsJson = await sessionsRes.json();
+    assert.ok(Array.isArray(sessionsJson));
+
+    // 4. Test /api/action POST
+    const actionRes = await fetch(`http://127.0.0.1:${port}/api/action`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'ping', target: 'tcTestToken' })
+    });
+    assert.equal(actionRes.status, 200);
+    const actionJson = await actionRes.json();
+    assert.equal(actionJson.success, true);
+    assert.equal(actionJson.action, 'ping');
+
+    await ctx.webServer.stop();
+  });
 });

@@ -2,7 +2,7 @@
 
 Manage persistent WireGuard identity keypairs, generate stable tokens, and configure custom DERP relays.
 
-> **OpenTUI Mapping**: Tab 06 (`KeysView`) | **Cordis Route**: `/?tab=keys`  
+> **OpenTUI Mapping**: Tab 06 | **Cordis Route**: `/?tab=keys`  
 > **Interactive Archify Visualizer**: [`docs/features/core/diagrams/web-arch.html`](../features/core/diagrams/web-arch.html) · [🌐 Live HTMLPreview](https://htmlpreview.github.io/?https://github.com/abdshomad/tailcat-tui-with-opentui/blob/main/docs/features/core/diagrams/web-arch.html)
 
 ```mermaid

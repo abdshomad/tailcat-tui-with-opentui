@@ -28,15 +28,37 @@ export class MetricsCollectorPlugin extends Service {
     ctx.metricsCollector = new MetricsCollectorPlugin(ctx);
   }
 
-  public getMetricsSummary(): { trackedPeers: number; totalPings: number } {
+  public getMetricsSummary(): { trackedPeers: number; totalPings: number; avgLatencyMs?: number } {
+    const latencies: number[] = [];
+    for (const m of this.metrics.values()) {
+      if (m.lastPingMs !== undefined) {
+        latencies.push(m.lastPingMs);
+      }
+    }
+    const avgLatency = latencies.length > 0 ? latencies.reduce((a, b) => a + b, 0) / latencies.length : undefined;
+
     return {
       trackedPeers: this.metrics.size,
       totalPings: this.pingCount,
+      avgLatencyMs: avgLatency ? parseFloat(avgLatency.toFixed(2)) : undefined,
     };
   }
 
   public getPeerMetrics(sessionId: string): PeerMetrics | undefined {
     return this.metrics.get(sessionId);
+  }
+
+  public getAllMetrics(): Record<string, PeerMetrics> {
+    const obj: Record<string, PeerMetrics> = {};
+    for (const [k, v] of this.metrics.entries()) {
+      obj[k] = v;
+    }
+    return obj;
+  }
+
+  public resetMetrics(): void {
+    this.metrics.clear();
+    this.pingCount = 0;
   }
 
   private parseMetrics(session: TailcatSession, logText: string): void {

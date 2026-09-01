@@ -312,6 +312,220 @@ test('E2E Simulation Screenshots & Documentation Generator', async () => {
           ]
         }
       ]
+    },
+    {
+      num: '09',
+      id: '09-multi-hop-tunnel',
+      title: 'Multi-Hop Chained Tunnels & Transit Routing Simulation',
+      desc: 'Chains multiple WireGuard user-space tunnels across intermediate nodes (Node A -> Node B -> Node C) to traverse segmented private enclaves.',
+      steps: [
+        {
+          num: 1,
+          slug: 'server-c-listener-start',
+          title: 'Step 1: Origin Service & Node C Listener Startup',
+          terminalTitle: 'node-server (Node C): tailcat serve 9090',
+          lines: [
+            `${ANSI.cyan}# Origin HTTP daemon listening on localhost:9090${ANSI.reset}`,
+            `${ANSI.green}# 🐈 Node C listening on token: tcOriginNodeCToken9988...${ANSI.reset}`,
+            `{"listenAddr":"tcOriginNodeCToken9988..."}`
+          ]
+        },
+        {
+          num: 2,
+          slug: 'node-b-relay-bridge',
+          title: 'Step 2: Intermediary Node B Transit Bridge',
+          terminalTitle: 'node-transit (Node B): bridge & serve 9091',
+          lines: [
+            `${ANSI.cyan}# Establishing transit forwarding to Node C token...${ANSI.reset}`,
+            `${ANSI.green}# 🐈 Node B forwarding listener ready: tcTransitNodeBToken7766...${ANSI.reset}`,
+            `Bridging incoming 9091 traffic -> Node C WireGuard tunnel.`
+          ]
+        },
+        {
+          num: 3,
+          slug: 'client-a-multi-hop-exec',
+          title: 'Step 3: Node A Dials Multi-Hop Path',
+          terminalTitle: 'node-client (Node A): tailcat <tokenB> 9091',
+          lines: [
+            `${ANSI.cyan}$ printf 'GET /hop HTTP/1.1\\r\\nHost: localhost\\r\\n\\r\\n' | tailcat tcTransitNodeBToken7766... 9091${ANSI.reset}`,
+            `${ANSI.green}HTTP/1.1 200 OK${ANSI.reset}`,
+            `${ANSI.brightYellow}MULTI_HOP_ORIGIN_SUCCESS${ANSI.reset}`,
+            `${ANSI.cyan}# Traffic routed seamlessly through Node A -> Node B -> Node C.${ANSI.reset}`
+          ]
+        }
+      ]
+    },
+    {
+      num: '10',
+      id: '10-daemon-lifecycle-auto-reconnect',
+      title: 'Daemon Lifecycle, Crash Resilience & Auto-Recovery Simulation',
+      desc: 'Validates daemon PID tracking, unexpected SIGKILL crash detection, stale PID file cleanup, and automated state restoration.',
+      steps: [
+        {
+          num: 1,
+          slug: 'daemon-start-persist',
+          title: 'Step 1: Persistent Daemon Startup',
+          terminalTitle: 'node-server: tailcat serve 8080 --daemon',
+          lines: [
+            `${ANSI.cyan}# Initializing persistent daemon supervisor...${ANSI.reset}`,
+            `${ANSI.green}# Daemon running in background with PID 1842.${ANSI.reset}`,
+            `Wrote configuration and active PID to ~/.config/tailcat-tui/`
+          ]
+        },
+        {
+          num: 2,
+          slug: 'daemon-crash-sigkill',
+          title: 'Step 2: Sudden Crash & Stale State Detection',
+          terminalTitle: 'supervisor: monitoring daemon health',
+          lines: [
+            `${ANSI.red}# Daemon process PID 1842 terminated unexpectedly (SIGKILL).${ANSI.reset}`,
+            `${ANSI.yellow}# Detected dead process in PID file. Cleaning stale state...${ANSI.reset}`,
+            `Cleared stale lock file ~/.config/tailcat-tui/web-server.pid.`
+          ]
+        },
+        {
+          num: 3,
+          slug: 'daemon-stale-pid-recovery',
+          title: 'Step 3: Auto-Recovery & Reconnection',
+          terminalTitle: 'supervisor: auto-recovery process',
+          lines: [
+            `${ANSI.cyan}# Reloading saved persistent configuration...${ANSI.reset}`,
+            `${ANSI.green}# Successfully spawned recovered daemon process with PID 2045.${ANSI.reset}`,
+            `${ANSI.green}# Tunnel endpoints and web server restored on port 3840.${ANSI.reset}`
+          ]
+        }
+      ]
+    },
+    {
+      num: '11',
+      id: '11-acl-denial-security',
+      title: 'ACL Tag Security & Malformed Token Denial Simulation',
+      desc: 'Validates that strict WireGuard ACL policies (--allow=nodekey:...) block unauthorized peers and corrupted tokens are rejected.',
+      steps: [
+        {
+          num: 1,
+          slug: 'server-acl-allow-key',
+          title: 'Step 1: Strict Server ACL Configuration',
+          terminalTitle: 'node-server: tailcat serve --allow=nodekey:840398fd...',
+          lines: [
+            `${ANSI.cyan}# Enforcing strict WireGuard ACL policy...${ANSI.reset}`,
+            `${ANSI.green}# Allowed client identity: nodekey:840398fd7c2d2fa73852555a9d86...${ANSI.reset}`,
+            `Connection token: tcStrictAclToken5544...`
+          ]
+        },
+        {
+          num: 2,
+          slug: 'client-authorized-dial',
+          title: 'Step 2: Authorized Client Connection',
+          terminalTitle: 'node-client (authorized identity)',
+          lines: [
+            `${ANSI.cyan}$ tailcat --key=auth-identity tcStrictAclToken5544... 8080${ANSI.reset}`,
+            `${ANSI.green}Handshake authorized by server ACL. Access granted.${ANSI.reset}`,
+            `${ANSI.brightYellow}SECURE_ENCLAVE_DATA${ANSI.reset}`
+          ]
+        },
+        {
+          num: 3,
+          slug: 'rogue-client-handshake-blocked',
+          title: 'Step 3: Rogue Identity & Corrupted Token Blocked',
+          terminalTitle: 'node-client (unauthorized / rogue attempts)',
+          lines: [
+            `${ANSI.cyan}$ tailcat --key=rogue tcStrictAclToken5544... 8080${ANSI.reset}`,
+            `${ANSI.red}ERROR: WireGuard handshake dropped. Remote ACL rejected client public key.${ANSI.reset}`,
+            `${ANSI.cyan}$ tailcat 'invalid-corrupted-token' 8080${ANSI.reset}`,
+            `${ANSI.red}ERROR: Failed to parse token: base32 decode failed.${ANSI.reset}`
+          ]
+        }
+      ]
+    },
+    {
+      num: '12',
+      id: '12-high-concurrency-stream',
+      title: 'High-Concurrency Multi-Stream & Metrics Simulation',
+      desc: 'Spawns multiple parallel worker streams over concurrent tunnels to benchmark throughput, zero packet loss, and live telemetry tracking.',
+      steps: [
+        {
+          num: 1,
+          slug: 'concurrent-server-listener',
+          title: 'Step 1: Concurrent High-Capacity Server Listener',
+          terminalTitle: 'node-server: tailcat serve 8080',
+          lines: [
+            `${ANSI.cyan}# Starting concurrent listener with netstack connection multiplexing...${ANSI.reset}`,
+            `${ANSI.green}# 🐈 Server listening with token: tcConcurrentMultiplexToken1122...${ANSI.reset}`
+          ]
+        },
+        {
+          num: 2,
+          slug: 'parallel-workers-stream',
+          title: 'Step 2: Parallel Client Stream Workers',
+          terminalTitle: 'node-client: 5 parallel workers streaming',
+          lines: [
+            `${ANSI.cyan}$ [worker-1] Sent 64KB payload -> Received echo OK (1.2ms)${ANSI.reset}`,
+            `${ANSI.cyan}$ [worker-2] Sent 64KB payload -> Received echo OK (1.4ms)${ANSI.reset}`,
+            `${ANSI.cyan}$ [worker-3] Sent 64KB payload -> Received echo OK (1.1ms)${ANSI.reset}`,
+            `${ANSI.cyan}$ [worker-4] Sent 64KB payload -> Received echo OK (1.5ms)${ANSI.reset}`,
+            `${ANSI.cyan}$ [worker-5] Sent 64KB payload -> Received echo OK (1.3ms)${ANSI.reset}`,
+            `${ANSI.green}100% concurrent stream integrity verified.${ANSI.reset}`
+          ]
+        },
+        {
+          num: 3,
+          slug: 'metrics-telemetry-verification',
+          title: 'Step 3: Metrics & Telemetry Aggregation',
+          terminalTitle: 'metrics-collector: live telemetry dashboard',
+          lines: [
+            `${ANSI.cyan}# Telemetry Summary: 5 active concurrent peers${ANSI.reset}`,
+            `Total Pings / Probes: 15 | Average Latency: 1.30ms`,
+            `Total Bytes Transferred: 640 KB | Error Count: 0`,
+            `${ANSI.green}All streams healthy with zero frame drops.${ANSI.reset}`
+          ]
+        }
+      ]
+    },
+    {
+      num: '13',
+      id: '13-web-server-headless-api',
+      title: 'Web Server Headless Mode & Remote API Control Simulation',
+      desc: 'Controls Tailcat services headlessly over HTTP REST and telemetry endpoints without requiring interactive terminal TUI.',
+      steps: [
+        {
+          num: 1,
+          slug: 'headless-web-daemon-launch',
+          title: 'Step 1: Headless Web Server Startup',
+          terminalTitle: 'tailcat-tui --web --web-daemon --web-port=3840',
+          lines: [
+            `${ANSI.cyan}# Launching headless Web API server on port 3840...${ANSI.reset}`,
+            `${ANSI.green}# Tailcat Web Dashboard online at http://127.0.0.1:3840${ANSI.reset}`,
+            `REST Endpoints exposed: /api/status, /api/metrics, /api/sessions, /api/action`
+          ]
+        },
+        {
+          num: 2,
+          slug: 'rest-api-status-probe',
+          title: 'Step 2: Probe Status & Telemetry via curl',
+          terminalTitle: 'curl http://127.0.0.1:3840/api/status',
+          lines: [
+            `${ANSI.cyan}$ curl -s http://127.0.0.1:3840/api/status | jq .${ANSI.reset}`,
+            `{`,
+            `  "status": "online",`,
+            `  "port": 3840,`,
+            `  "daemon": true,`,
+            `  "plugins": ["webServer", "autoPortScanner", "metricsCollector", "fileLogger"]`,
+            `}`
+          ]
+        },
+        {
+          num: 3,
+          slug: 'rest-api-action-execution',
+          title: 'Step 3: Trigger Service Actions via POST API',
+          terminalTitle: 'curl -X POST http://127.0.0.1:3840/api/action',
+          lines: [
+            `${ANSI.cyan}$ curl -s -X POST -d '{"action":"ping","target":"tcPeerToken"}' http://127.0.0.1:3840/api/action${ANSI.reset}`,
+            `{"success":true,"action":"ping","received":{"action":"ping","target":"tcPeerToken"}}`,
+            `${ANSI.green}Action executed successfully via headless REST API.${ANSI.reset}`
+          ]
+        }
+      ]
     }
   ];
 
@@ -373,7 +587,7 @@ Run this individual scenario in the test environment:
   // Generate docs/simulation/README.md
   const indexMd = `# Tailcat Multi-Node Network Simulation Visual Guide
 
-This documentation provides comprehensive step-by-step visual walkthroughs for all 8 networking scenarios described in [tailcat/README.md](../../tailcat/README.md), simulated across isolated multi-node Docker containers.
+This documentation provides comprehensive step-by-step visual walkthroughs for all 13 networking scenarios, simulated across isolated multi-node Docker containers.
 
 ---
 

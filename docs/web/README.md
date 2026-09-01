@@ -1,6 +1,6 @@
 # Tailcat Web Dashboard Visual Documentation
 
-Comprehensive visual guide for all 7 modules in the **Cordis-powered Tailcat Web Dashboard**.
+Comprehensive visual guide for all 7 modules in the **[Cordis](https://github.com/cordiverse/cordis)-powered Tailcat Web Dashboard**.
 
 ---
 

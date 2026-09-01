@@ -153,4 +153,12 @@ export class TailcatService extends Service {
 
     return session;
   }
+
+  public clearFinishedSessions(): void {
+    for (const [id, session] of this.sessions.entries()) {
+      if (session.status === 'completed' || session.status === 'failed') {
+        this.sessions.delete(id);
+      }
+    }
+  }
 }

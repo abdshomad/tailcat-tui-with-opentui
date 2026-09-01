@@ -23,7 +23,7 @@ usage() {
   echo "Usage: $0 [options]"
   echo ""
   echo "Options:"
-  echo "  --all                 Run all 8 README simulation scenarios (default)"
+  echo "  --all                 Run all 13 network simulation scenarios (default)"
   echo "  --scenario <name|num> Run a specific scenario (e.g. 01, 03-auth-free-ssh)"
   echo "  --derp <local|public> Relay mode: 'local' (derper container) or 'public' (tailcat.dev)"
   echo "  --no-build            Skip docker compose rebuild"
@@ -96,7 +96,7 @@ sleep 2
 # 2. Collect Scenarios to run
 SCENARIOS=()
 if [ "$TARGET_SCENARIO" = "all" ]; then
-  for s in "${SCRIPT_DIR}/scenarios"/0*.sh; do
+  for s in "${SCRIPT_DIR}/scenarios"/[0-9]*.sh; do
     [ -f "$s" ] && SCENARIOS+=("$s")
   done
 else

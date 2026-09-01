@@ -2,7 +2,7 @@
 
 Create raw bidirectional data streams over Tailscale WireGuard/DERP data plane for streaming payloads or terminal pipes between peers.
 
-> **OpenTUI Mapping**: Tab 01 (`PipeView`) | **Cordis Route**: `/?tab=pipe`  
+> **OpenTUI Mapping**: Tab 01 | **Cordis Route**: `/?tab=pipe`  
 > **Interactive Archify Visualizer**: [`docs/features/core/diagrams/web-arch.html`](../features/core/diagrams/web-arch.html) · [🌐 Live HTMLPreview](https://htmlpreview.github.io/?https://github.com/abdshomad/tailcat-tui-with-opentui/blob/main/docs/features/core/diagrams/web-arch.html)
 
 ```mermaid

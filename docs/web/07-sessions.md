@@ -2,7 +2,7 @@
 
 Real-time dashboard monitoring background tunnels, connection tokens, process status, and lifecycle controls.
 
-> **OpenTUI Mapping**: Tab 07 (`SessionsView`) | **Cordis Route**: `/?tab=sessions`  
+> **OpenTUI Mapping**: Tab 07 | **Cordis Route**: `/?tab=sessions`  
 > **Interactive Archify Visualizer**: [`docs/features/core/diagrams/web-arch.html`](../features/core/diagrams/web-arch.html) · [🌐 Live HTMLPreview](https://htmlpreview.github.io/?https://github.com/abdshomad/tailcat-tui-with-opentui/blob/main/docs/features/core/diagrams/web-arch.html)
 
 ```mermaid

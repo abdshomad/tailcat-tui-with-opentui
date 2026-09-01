@@ -148,6 +148,49 @@ Manage the Cordis micro-kernel dynamic plugin registry (`webServer`, `fileLogger
 
 ---
 
+## 9. Multi-Node Simulation Network Scenarios (13 Scenarios)
+
+All 13 networking scenarios from basic pipe streaming to multi-hop transit routing, daemon auto-recovery, and high-concurrency tunnels are simulated across isolated multi-node Docker containers:
+
+| Scenario 9: Multi-Hop Transit Bridge | Scenario 10: Daemon Crash Recovery |
+| :---: | :---: |
+| ![Multi-Hop Bridge](../screenshots/simulation/09-multi-hop-tunnel/node-b-relay-bridge/02-node-b-relay-bridge.webp) | ![Daemon Recovery](../screenshots/simulation/10-daemon-lifecycle-auto-reconnect/daemon-stale-pid-recovery/03-daemon-stale-pid-recovery.webp) |
+
+| Scenario 11: ACL Security Enforcement | Scenario 12: High-Concurrency Multiplex |
+| :---: | :---: |
+| ![ACL Denial](../screenshots/simulation/11-acl-denial-security/rogue-client-handshake-blocked/03-rogue-client-handshake-blocked.webp) | ![Concurrent Streams](../screenshots/simulation/12-high-concurrency-stream/parallel-workers-stream/02-parallel-workers-stream.webp) |
+
+* Detailed individual scenario guides: **[docs/simulation/README.md](simulation/README.md)**.
+
+---
+
+## 10. Headless REST API & Telemetry Endpoints
+
+The web server plugin exposes JSON REST endpoints for headless remote monitoring and control:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Remote Client / curl
+    participant Web as Cordis Web Plugin (:3840)
+    participant Core as TailcatService / Kernel
+    participant Metric as MetricsCollector
+
+    Client->>Web: GET /api/status
+    Web->>Core: Query binary info & daemon PID
+    Web-->>Client: 200 OK (status, port, plugins)
+
+    Client->>Web: GET /api/metrics
+    Web->>Metric: Query aggregated latency & pings
+    Web-->>Client: 200 OK (trackedPeers, avgLatencyMs)
+
+    Client->>Web: POST /api/action {"action":"ping","target":"tcToken..."}
+    Web->>Core: Execute headless action
+    Web-->>Client: 200 OK {"success":true}
+```
+
+---
+
 ## 🧪 Re-generating All Visuals
 
 To regenerate all screenshots and markdown guides:

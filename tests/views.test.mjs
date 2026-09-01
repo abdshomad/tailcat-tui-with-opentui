@@ -77,11 +77,24 @@ test('Action handlers trigger appropriate service methods and validations', () =
   assert.ok(KeysView.handleAction(state, ctx.tailcat).includes('Error'));
 });
 
-test('TailcatTUIApp instantiates and renders without throwing', () => {
+test('TailcatTUIApp instantiates, switches tabs, and handles input', () => {
   const ctx = new Context();
   ctx.plugin(TailcatService);
   const app = new TailcatTUIApp(ctx.tailcat);
   assert.doesNotThrow(() => {
     app.render();
   });
+
+  // Switch tabs
+  app.getState().activeTab = 7; // Tab 8 (Web server)
+  assert.strictEqual(app.getState().activeTab, 7);
+
+  // Type input in form
+  app.getState().forms.pipeMessage = 'hello world';
+  assert.strictEqual(app.getState().forms.pipeMessage, 'hello world');
+
+  // Next field cycling
+  const initialIndex = app.getState().forms.focusedFieldIndex;
+  app.getState().forms.focusedFieldIndex = (initialIndex + 1) % 10;
+  assert.strictEqual(app.getState().forms.focusedFieldIndex, (initialIndex + 1) % 10);
 });

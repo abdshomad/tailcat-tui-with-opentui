@@ -2,7 +2,7 @@
 
 > **"Tailscale without Tailscale, interactive in your terminal, browser, and multi-node simulations."**
 
-An interactive Terminal User Interface (TUI) powered by [OpenTUI](https://opentui.com), an embedded browser dashboard powered by [Cordis](https://cordis.moe) micro-kernel architecture, and an automated multi-node Docker Compose network simulation suite for all interaction modes in [tailcat](https://github.com/tailscale/tailcat).
+An interactive Terminal User Interface (TUI) powered by [OpenTUI](https://opentui.com), an embedded browser dashboard powered by [Cordis](https://github.com/cordiverse/cordis) micro-kernel architecture, and an automated multi-node Docker Compose network simulation suite for all interaction modes in [tailcat](https://github.com/tailscale/tailcat).
 
 ---
 
@@ -33,6 +33,26 @@ An interactive Terminal User Interface (TUI) powered by [OpenTUI](https://opentu
 
 - **Smart Binary Resolver**:
   - Automatically locates `tailcat` in system `$PATH`, local `bin/tailcat`, or compiles directly from `tailcat/` submodule.
+
+---
+
+## ⚡ 2-Minute Novice Quickstart
+
+> Full guide with visual diagrams & cheatsheets: **[docs/quickstart.md](docs/quickstart.md)**.
+
+Every Tailcat interaction follows **Share ➔ Token ➔ Join**:
+
+```bash
+# 1. Start the interactive TUI
+npm start
+
+# 2. Key Actions (Press 1-8 to switch views):
+# - Share a local port (e.g., 8080):  Tab [2] -> Type 8080 -> Press Enter -> Copy token
+# - Connect to a friend's port:       Tab [2] -> Paste token in Dial -> Press Enter
+# - Send a file:                      Tab [4] -> Paste receiver token & path -> Press Enter
+# - Quick Web Dashboard toggle:       Press [w] to open http://127.0.0.1:3840
+# - Exit TUI:                         Press [q]
+```
 
 ---
 
@@ -80,8 +100,9 @@ flowchart TD
 
 For complete module-by-module walkthroughs, explore our dedicated guides:
 * 📖 **[Side-by-Side Visual Comparison](docs/visual-guide.md)** — OpenTUI vs Cordis Web Dashboard.
-* 🐳 **[Multi-Node Simulation Visual Guide](docs/simulation/README.md)** — Step-by-step terminal walkthroughs for all 8 simulated scenarios.
+* 🐳 **[Multi-Node Simulation Visual Guide](docs/simulation/README.md)** — Step-by-step terminal walkthroughs for all 13 simulated scenarios.
 * 🌐 **[Web Dashboard Guide](docs/web/README.md)** — Comprehensive walkthrough for all Web Dashboard modules.
+* 🧪 **[Comprehensive Test Cases & Quality Guide](docs/testing.md)** — Granular test catalog and verification criteria.
 
 ### 1. Dual UI: OpenTUI Terminal vs Cordis Web Dashboard
 
@@ -170,22 +191,109 @@ node dist/index.js --stop-daemon
 
 ---
 
-## 🐳 Multi-Node Simulation Suite
+## 🐳 Multi-Node Simulation Suite (13 Scenarios)
 
-Simulate all networking scenarios across isolated Docker containers:
+Simulate 13 comprehensive networking scenarios across isolated Docker containers (`node-server`, `node-client`, `derper` relay):
+
+| # | Scenario Name | Documentation | Description | Execution Command |
+| :---: | :--- | :---: | :--- | :--- |
+| **01** | Pipe & Raw Stream | [01-pipe-stream.md](docs/simulation/01-pipe-stream.md) | Bidirectional raw stream pipe between nodes | `./scripts/simulate.sh --scenario 01` |
+| **02** | Port Forwarding (8080) | [02-port-forward.md](docs/simulation/02-port-forward.md) | Forward local TCP port to remote dialer | `./scripts/simulate.sh --scenario 02` |
+| **03** | Auth-Free SSH | [03-auth-free-ssh.md](docs/simulation/03-auth-free-ssh.md) | Remote shell command execution | `./scripts/simulate.sh --scenario 03` |
+| **04** | Files, Drop Box & SFTP | [04-file-sftp.md](docs/simulation/04-file-sftp.md) | Drop box upload, SFTP serve, `ls`, `cp` | `./scripts/simulate.sh --scenario 04` |
+| **05** | Network Diagnostics & Ping | [05-ping-diagnostics.md](docs/simulation/05-ping-diagnostics.md) | Probe DERP relay vs direct UDP path | `./scripts/simulate.sh --scenario 05` |
+| **06** | SOCKS5 Proxy Runner | [06-socks5-proxy.md](docs/simulation/06-socks5-proxy.md) | Tunnel arbitrary CLI commands via SOCKS5 | `./scripts/simulate.sh --scenario 06` |
+| **07** | Key Management & ACL | [07-key-management-acl.md](docs/simulation/07-key-management-acl.md) | WireGuard public key ACL enforcement | `./scripts/simulate.sh --scenario 07` |
+| **08** | Token Parse & Resolve | [08-token-parse-resolve.md](docs/simulation/08-token-parse-resolve.md) | Parse token JSON & resolve DERP nodes | `./scripts/simulate.sh --scenario 08` |
+| **09** | Multi-Hop Chained Tunnels | [09-multi-hop-tunnel.md](docs/simulation/09-multi-hop-tunnel.md) | Route across Node A $\rightarrow$ Node B $\rightarrow$ Node C | `./scripts/simulate.sh --scenario 09` |
+| **10** | Daemon Lifecycle & Recovery | [10-daemon-lifecycle-auto-reconnect.md](docs/simulation/10-daemon-lifecycle-auto-reconnect.md) | Crash detection, stale PID cleanup & restore | `./scripts/simulate.sh --scenario 10` |
+| **11** | ACL Security & Denial | [11-acl-denial-security.md](docs/simulation/11-acl-denial-security.md) | Block unauthorized keys & malformed tokens | `./scripts/simulate.sh --scenario 11` |
+| **12** | High-Concurrency Streams | [12-high-concurrency-stream.md](docs/simulation/12-high-concurrency-stream.md) | Concurrent parallel streams & data integrity | `./scripts/simulate.sh --scenario 12` |
+| **13** | Headless Web REST API | [13-web-server-headless-api.md](docs/simulation/13-web-server-headless-api.md) | Headless HTTP control and metrics telemetry | `./scripts/simulate.sh --scenario 13` |
 
 ```bash
-# Run all 8 simulation scenarios in Docker Compose
+# Run all 13 simulation scenarios in Docker Compose
 npm run test:simulation
 
 # Or run directly via CLI runner
 ./scripts/simulate.sh --all
 
-# Run a specific scenario (e.g., Scenario 3: Auth-Free SSH)
-./scripts/simulate.sh --scenario 03-auth-free-ssh
+# Run a specific scenario (e.g., Scenario 09: Multi-Hop Tunnels)
+./scripts/simulate.sh --scenario 09
 
 # Run with public Tailcat relays instead of local DERP
 ./scripts/simulate.sh --all --derp public
+```
+
+---
+
+## 🔌 Headless REST API & Telemetry Reference
+
+When the Web Server is active (either embedded or running as a background daemon), it exposes headless REST JSON endpoints:
+
+### 1. `GET /api/status`
+Returns service status, active port, daemon status, PID, and enabled plugins:
+```bash
+curl -s http://127.0.0.1:3840/api/status
+```
+```json
+{
+  "status": "online",
+  "port": 3840,
+  "running": true,
+  "daemon": false,
+  "daemonPid": null,
+  "binary": { "available": true, "path": "/usr/local/bin/tailcat", "source": "system" },
+  "plugins": ["webServer", "autoPortScanner", "metricsCollector", "fileLogger"]
+}
+```
+
+### 2. `GET /api/metrics`
+Returns live peer telemetry, tracked ping counts, and average latency:
+```bash
+curl -s http://127.0.0.1:3840/api/metrics
+```
+```json
+{
+  "trackedPeers": 3,
+  "totalPings": 12,
+  "avgLatencyMs": 1.45
+}
+```
+
+### 3. `GET /api/sessions`
+Returns active supervised subprocess sessions, tokens, and statuses:
+```bash
+curl -s http://127.0.0.1:3840/api/sessions
+```
+```json
+[
+  {
+    "id": "session-1-m3a9",
+    "type": "serve-8080",
+    "command": "tailcat serve 8080",
+    "status": "running",
+    "token": "tco2FwWCBhlxbJAG4BM-..."
+  }
+]
+```
+
+### 4. `POST /api/action`
+Executes service actions (ping, scan, port tunnel) headlessly:
+```bash
+curl -s -X POST http://127.0.0.1:3840/api/action \
+  -H "Content-Type: application/json" \
+  -d '{"action": "ping", "target": "tco2FwWCBhlxbJAG4BM-..."}'
+```
+```json
+{
+  "success": true,
+  "action": "ping",
+  "received": {
+    "action": "ping",
+    "target": "tco2FwWCBhlxbJAG4BM-..."
+  }
+}
 ```
 
 ---
@@ -234,10 +342,10 @@ tailcat-tui-with-opentui/
 │       └── Dockerfile.derper           # Local test DERP relay & STUN server
 ├── scripts/
 │   ├── simulate.sh                     # CLI simulation runner with exit codes & reporting
-│   └── scenarios/                      # Modular shell test scripts (Scenarios 01-08)
+│   └── scenarios/                      # Modular shell test scripts (Scenarios 01-13)
 ├── tests/
 │   ├── service.test.mjs                # Unit tests for Cordis TailcatService
-│   ├── plugins.test.mjs                # Unit tests for Cordis Plugin Registry & lifecycles
+│   ├── plugins.test.mjs                # Unit tests for Cordis Plugin Registry, lifecycles & REST APIs
 │   ├── views.test.mjs                  # Unit tests for TUI views & action handlers
 │   ├── web-serving.test.mjs            # Unit tests for port scanner, daemon & web plugin
 │   ├── simulation.test.mjs             # Node.js runner integration for Docker simulations
@@ -248,7 +356,8 @@ tailcat-tui-with-opentui/
 │   └── simulation/                     # Multi-node simulation terminal frame screenshots
 └── docs/
     ├── visual-guide.md                 # TUI vs Web comparison guide
-    ├── simulation/                     # Step-by-step visual guides for all 8 scenarios
+    ├── testing.md                      # Comprehensive test cases & quality guide
+    ├── simulation/                     # Step-by-step visual guides for all 13 scenarios
     └── web/                            # Documentation for all 7 Web dashboard modules
 ```
 
@@ -256,23 +365,25 @@ tailcat-tui-with-opentui/
 
 ## 🧪 Testing & Verification Architecture
 
+> For the exhaustive per-assertion test catalog, preconditions, and pass criteria, see **[docs/testing.md](docs/testing.md)**.
+
 Tailcat features a 3-tier automated testing and visual verification suite:
 
 ### 1. In-Process Unit & Cordis Service Tests
-Validates the micro-kernel service lifecycle, dynamic plugin registration/disposal (`tests/plugins.test.mjs`), port scanning heuristics, configuration storage, view rendering, and process supervision:
+Validates the micro-kernel service lifecycle, dynamic plugin registration/disposal (`tests/plugins.test.mjs`), port scanning heuristics, configuration storage, view rendering, REST API endpoints (`/api/status`, `/api/metrics`, `/api/sessions`, `/api/action`), and process supervision:
 ```bash
 npm test
 ```
 
-### 2. Multi-Node Docker Network Simulations
-Runs live, end-to-end integration tests for 100% of scenarios from `tailcat/README.md` across isolated Docker containers (`node-server`, `node-client`, `derper` relay):
+### 2. Multi-Node Docker Network Simulations (13 Scenarios)
+Runs live, end-to-end integration tests for all 13 networking scenarios across isolated Docker containers (`node-server`, `node-client`, `derper` relay):
 ```bash
-# Run all 8 simulation scenarios
+# Run all 13 simulation scenarios
 npm run test:simulation
 
 # Run via CLI orchestrator with custom options
 ./scripts/simulate.sh --all
-./scripts/simulate.sh --scenario 03-auth-free-ssh
+./scripts/simulate.sh --scenario 09-multi-hop-tunnel
 ./scripts/simulate.sh --all --derp public
 ```
 
