@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tailcat TUI & Web - Archify Interactive Architecture Diagram</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-border: #30363d;
+      --text: #c9d1d9;
+      --text-bright: #f0f6fc;
+      --text-muted: #8b949e;
+      --accent-cyan: #38bdf8;
+      --accent-green: #34d399;
+      --accent-purple: #c084fc;
+      --accent-amber: #fbbf24;
+      --accent-rose: #fb7185;
+      --accent-blue: #60a5fa;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #0284c7, #6366f1);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .filter-btn {
+      background: #21262d;
+      border: 1px solid var(--surface-border);
+      color: var(--text);
+      font-size: 12px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .filter-btn:hover, .filter-btn.active {
+      background: #30363d;
+      color: var(--text-bright);
+      border-color: var(--accent-cyan);
+    }
+
+    .sim-btn {
+      background: #1e3a5f;
+      border: 1px solid #38bdf8;
+      color: #38bdf8;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .sim-btn:hover {
+      background: #38bdf8;
+      color: #0f172a;
+    }
+
+    .sim-btn.running {
+      background: #065f46;
+      border-color: #34d399;
+      color: #34d399;
+    }
+
+    main {
+      display: flex;
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #viewport {
+      flex: 1;
+      height: 100%;
+      overflow: auto;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, #161b22 1px, transparent 1px);
+      background-size: 24px 24px;
+      padding: 40px;
+    }
+
+    svg#arch-canvas {
+      min-width: 1400px;
+      min-height: 980px;
+      display: block;
+    }
+
+    /* Inspector Drawer */
+    #inspector {
+      width: 420px;
+      background: var(--surface);
+      border-left: 1px solid var(--surface-border);
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      overflow-y: auto;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.5);
+      transition: transform 0.3s ease;
+      z-index: 5;
+    }
+
+    #inspector.collapsed {
+      transform: translateX(100%);
+      display: none;
+    }
+
+    .inspector-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .inspector-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    .inspector-tag {
+      display: inline-block;
+      font-size: 11px;
+      font-family: var(--font-mono);
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-top: 4px;
+    }
+
+    .close-btn {
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 18px;
+      cursor: pointer;
+    }
+
+    .close-btn:hover {
+      color: var(--text-bright);
+    }
+
+    .inspector-section {
+      margin-bottom: 18px;
+    }
+
+    .inspector-section h4 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .code-pill {
+      background: #0d1117;
+      border: 1px solid var(--surface-border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-cyan);
+      word-break: break-all;
+    }
+
+    .list-items {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 13px;
+    }
+
+    .list-items li {
+      position: relative;
+      padding-left: 16px;
+    }
+
+    .list-items li::before {
+      content: '•';
+      position: absolute;
+      left: 0;
+      color: var(--accent-cyan);
+    }
+
+    /* SVG Elements */
+    .tier-box {
+      fill: rgba(22, 27, 34, 0.6);
+      stroke: var(--surface-border);
+      stroke-width: 1.5;
+      rx: 12;
+    }
+
+    .tier-label {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      font-weight: 700;
+      fill: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .node-card {
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .node-card:hover .node-rect {
+      stroke-width: 2.5;
+      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.4));
+    }
+
+    .node-card.selected .node-rect {
+      stroke-width: 3;
+      stroke: var(--accent-amber) !important;
+      filter: drop-shadow(0 0 12px rgba(251, 191, 36, 0.6));
+    }
+
+    .node-rect {
+      fill: #1c2128;
+      stroke: var(--surface-border);
+      stroke-width: 1.5;
+      rx: 8;
+      transition: all 0.2s;
+    }
+
+    .node-title {
+      font-family: var(--font-sans);
+      font-size: 13px;
+      font-weight: 600;
+      fill: var(--text-bright);
+    }
+
+    .node-sub {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      fill: var(--text-muted);
+    }
+
+    .edge-line {
+      fill: none;
+      stroke: #30363d;
+      stroke-width: 1.5;
+      stroke-dasharray: 4, 4;
+      transition: stroke 0.3s, stroke-width 0.3s;
+    }
+
+    .edge-line.active {
+      stroke: var(--accent-cyan);
+      stroke-width: 2.5;
+      stroke-dasharray: none;
+    }
+
+    .flow-pulse {
+      fill: var(--accent-cyan);
+      opacity: 0;
+    }
+
+    /* Color Roles */
+    .color-ui { stroke: var(--accent-blue); }
+    .color-kernel { stroke: var(--accent-purple); }
+    .color-plugin { stroke: var(--accent-green); }
+    .color-process { stroke: var(--accent-amber); }
+    .color-sim { stroke: var(--accent-rose); }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span class="brand-badge">ARCHIFY</span>
+      <h1>Tailcat TUI &amp; Web Dashboard Architecture</h1>
+    </div>
+    <div class="controls">
+      <button class="filter-btn active" onclick="filterTier('all')">All Tiers</button>
+      <button class="filter-btn" onclick="filterTier('ui')">UI Layer</button>
+      <button class="filter-btn" onclick="filterTier('kernel')">Cordis Kernel</button>
+      <button class="filter-btn" onclick="filterTier('plugins')">Plugins</button>
+      <button class="filter-btn" onclick="filterTier('supervisor')">Supervision</button>
+      <button class="filter-btn" onclick="filterTier('simulation')">Simulation</button>
+      <button id="sim-toggle-btn" class="sim-btn" onclick="toggleSimulation()">
+        <span id="sim-icon">▶</span> Simulate Flow
+      </button>
+    </div>
+  </header>
+
+  <main>
+    <div id="viewport">
+      <svg id="arch-canvas" viewBox="0 0 1380 940">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 8 5 L 0 9 z" fill="#4b5563" />
+          </marker>
+          <marker id="arrow-active" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 8 5 L 0 9 z" fill="#38bdf8" />
+          </marker>
+        </defs>
+
+        <!-- TIER 1: Presentation & User Interfaces -->
+        <g id="tier-ui" class="tier-group">
+          <rect class="tier-box" x="40" y="30" width="1300" height="150" />
+          <text class="tier-label" x="60" y="55">Tier 1: Presentation &amp; User Interfaces</text>
+          
+          <!-- OpenTUI App -->
+          <g class="node-card" onclick="selectNode('opentui-app')">
+            <rect class="node-rect color-ui" x="60" y="70" width="220" height="90" />
+            <text class="node-title" x="75" y="96">OpenTUI Terminal Engine</text>
+            <text class="node-sub" x="75" y="116">src/tui/app.ts (8 Views)</text>
+            <text class="node-sub" x="75" y="134">Hotkeys [1-8], [w], [Tab]</text>
+          </g>
+
+          <!-- TUI Views Array -->
+          <g class="node-card" onclick="selectNode('tui-views')">
+            <rect class="node-rect color-ui" x="310" y="70" width="460" height="90" />
+            <text class="node-title" x="325" y="96">OpenTUI View Components (Tabs 1-8)</text>
+            <text class="node-sub" x="325" y="116">PipeView · PortsView · SSHView · FilesView</text>
+            <text class="node-sub" x="325" y="134">DiagnosticsView · KeysView · SessionsView · WebView</text>
+          </g>
+
+          <!-- Web Dashboard UI -->
+          <g class="node-card" onclick="selectNode('web-dashboard')">
+            <rect class="node-rect color-ui" x="800" y="70" width="250" height="90" />
+            <text class="node-title" x="815" y="96">Browser Web Dashboard</text>
+            <text class="node-sub" x="815" y="116">http://127.0.0.1:3840/</text>
+            <text class="node-sub" x="815" y="134">Dark-Mode SPA &amp; Real-time APIs</text>
+          </g>
+
+          <!-- Visual Screenshot Engine -->
+          <g class="node-card" onclick="selectNode('screenshot-engine')">
+            <rect class="node-rect color-ui" x="1080" y="70" width="240" height="90" />
+            <text class="node-title" x="1095" y="96">Visual Proof Generator</text>
+            <text class="node-sub" x="1095" y="116">TerminalScreenshot &amp; Web</text>
+            <text class="node-sub" x="1095" y="134">Headless Chrome + .webp</text>
+          </g>
+        </g>
+
+        <!-- TIER 2: Cordis Micro-Kernel & Core Services -->
+        <g id="tier-kernel" class="tier-group">
+          <rect class="tier-box" x="40" y="220" width="1300" height="150" />
+          <text class="tier-label" x="60" y="245">Tier 2: Cordis Micro-Kernel &amp; Service Layer</text>
+
+          <!-- Cordis Kernel Core -->
+          <g class="node-card" onclick="selectNode('cordis-core')">
+            <rect class="node-rect color-kernel" x="60" y="260" width="260" height="90" />
+            <text class="node-title" x="75" y="286">Cordis Micro-Kernel Context</text>
+            <text class="node-sub" x="75" y="306">cordis/packages/core (Context)</text>
+            <text class="node-sub" x="75" y="324">Event Bus, Dependency Injection</text>
+          </g>
+
+          <!-- PluginManagerService -->
+          <g class="node-card" onclick="selectNode('plugin-manager')">
+            <rect class="node-rect color-kernel" x="350" y="260" width="310" height="90" />
+            <text class="node-title" x="365" y="286">PluginManagerService</text>
+            <text class="node-sub" x="365" y="306">src/services/plugin-manager.service.ts</text>
+            <text class="node-sub" x="365" y="324">Dynamic Fork / Dispose Lifecycles</text>
+          </g>
+
+          <!-- TailcatService -->
+          <g class="node-card" onclick="selectNode('tailcat-service')">
+            <rect class="node-rect color-kernel" x="690" y="260" width="310" height="90" />
+            <text class="node-title" x="705" y="286">TailcatService (Supervisor)</text>
+            <text class="node-sub" x="705" y="306">src/services/tailcat.service.ts</text>
+            <text class="node-sub" x="705" y="324">Process Registry &amp; Stream Piping</text>
+          </g>
+
+          <!-- App State Store -->
+          <g class="node-card" onclick="selectNode('state-store')">
+            <rect class="node-rect color-kernel" x="1030" y="260" width="290" height="90" />
+            <text class="node-title" x="1045" y="286">Reactive State &amp; Config</text>
+            <text class="node-sub" x="1045" y="306">src/tui/state.ts</text>
+            <text class="node-sub" x="1045" y="324">~/.config/tailcat-tui/config.json</text>
+          </g>
+        </g>
+
+        <!-- TIER 3: Dynamic Cordis Plugin Registry -->
+        <g id="tier-plugins" class="tier-group">
+          <rect class="tier-box" x="40" y="410" width="1300" height="150" />
+          <text class="tier-label" x="60" y="435">Tier 3: Dynamic Extension Plugins (Runtime fork.dispose())</text>
+
+          <!-- WebServer Plugin -->
+          <g class="node-card" onclick="selectNode('plugin-web')">
+            <rect class="node-rect color-plugin" x="60" y="450" width="290" height="90" />
+            <text class="node-title" x="75" y="476">webServer (TailcatWebPlugin)</text>
+            <text class="node-sub" x="75" y="496">src/services/web-server.plugin.ts</text>
+            <text class="node-sub" x="75" y="514">HTTP REST /api/sessions + Static</text>
+          </g>
+
+          <!-- FileLogger Plugin -->
+          <g class="node-card" onclick="selectNode('plugin-logger')">
+            <rect class="node-rect color-plugin" x="380" y="450" width="280" height="90" />
+            <text class="node-title" x="395" y="476">fileLogger (FileLoggerPlugin)</text>
+            <text class="node-sub" x="395" y="496">src/services/file-logger.plugin.ts</text>
+            <text class="node-sub" x="395" y="514">~/.config/tailcat-tui/logs/*.log</text>
+          </g>
+
+          <!-- AutoPortScanner Plugin -->
+          <g class="node-card" onclick="selectNode('plugin-port')">
+            <rect class="node-rect color-plugin" x="690" y="450" width="310" height="90" />
+            <text class="node-title" x="705" y="476">autoPortScanner (ScannerPlugin)</text>
+            <text class="node-sub" x="705" y="496">src/services/auto-port-scanner.plugin.ts</text>
+            <text class="node-sub" x="705" y="514">Probes TCP 3840+ &amp; allocates ports</text>
+          </g>
+
+          <!-- MetricsCollector Plugin -->
+          <g class="node-card" onclick="selectNode('plugin-metrics')">
+            <rect class="node-rect color-plugin" x="1030" y="450" width="290" height="90" />
+            <text class="node-title" x="1045" y="476">metricsCollector (MetricsPlugin)</text>
+            <text class="node-sub" x="1045" y="496">src/services/metrics-collector.plugin.ts</text>
+            <text class="node-sub" x="1045" y="514">DERP vs UDP latency tracker</text>
+          </g>
+        </g>
+
+        <!-- TIER 4: Process Supervision & Native Binaries -->
+        <g id="tier-supervisor" class="tier-group">
+          <rect class="tier-box" x="40" y="600" width="1300" height="140" />
+          <text class="tier-label" x="60" y="625">Tier 4: Process Supervision &amp; Tailcat Sub-Daemons</text>
+
+          <!-- Binary Resolver & Daemon Mgr -->
+          <g class="node-card" onclick="selectNode('binary-resolver')">
+            <rect class="node-rect color-process" x="60" y="640" width="270" height="80" />
+            <text class="node-title" x="75" y="666">Binary Resolver &amp; Daemon Mgr</text>
+            <text class="node-sub" x="75" y="686">src/utils/binary-resolver.ts</text>
+            <text class="node-sub" x="75" y="702">Resolves PATH / bin / submodules</text>
+          </g>
+
+          <!-- Child Processes Pool -->
+          <g class="node-card" onclick="selectNode('subprocesses')">
+            <rect class="node-rect color-process" x="360" y="640" width="600" height="80" />
+            <text class="node-title" x="375" y="666">Spawned Tailcat Subprocesses (Session Pool)</text>
+            <text class="node-sub" x="375" y="686">tailcat pipe · serve-port · dial-port · ssh · drop-box · sftp · ping</text>
+            <text class="node-sub" x="375" y="702">Supervised with PID, stdout/stderr streams, and hotkey termination [k]</text>
+          </g>
+
+          <!-- Detached Daemon Mode -->
+          <g class="node-card" onclick="selectNode('daemon-mode')">
+            <rect class="node-rect color-process" x="990" y="640" width="330" height="80" />
+            <text class="node-title" x="1005" y="666">Detached Background Daemon</text>
+            <text class="node-sub" x="1005" y="686">src/utils/daemon-manager.ts</text>
+            <text class="node-sub" x="1005" y="702">Tracks PID in ~/.config/.../web-server.pid</text>
+          </g>
+        </g>
+
+        <!-- TIER 5: Network Simulation & Docker Topology -->
+        <g id="tier-simulation" class="tier-group">
+          <rect class="tier-box" x="40" y="770" width="1300" height="140" />
+          <text class="tier-label" x="60" y="795">Tier 5: Multi-Node Network Simulation Suite</text>
+
+          <!-- Docker Server Node -->
+          <g class="node-card" onclick="selectNode('sim-server')">
+            <rect class="node-rect color-sim" x="60" y="810" width="280" height="80" />
+            <text class="node-title" x="75" y="836">node-server (Docker)</text>
+            <text class="node-sub" x="75" y="856">IP: 172.28.0.2 / WireGuard</text>
+            <text class="node-sub" x="75" y="872">Hosts Pipes, Ports, SSH, SFTP</text>
+          </g>
+
+          <!-- DERP Relay Node -->
+          <g class="node-card" onclick="selectNode('sim-derper')">
+            <rect class="node-rect color-sim" x="370" y="810" width="260" height="80" />
+            <text class="node-title" x="385" y="836">tailcat-sim-derper (Relay)</text>
+            <text class="node-sub" x="385" y="856">Port 3340/TCP + 3478/UDP</text>
+            <text class="node-sub" x="385" y="872">Custom STUN &amp; DERP Relay</text>
+          </g>
+
+          <!-- Docker Client Node -->
+          <g class="node-card" onclick="selectNode('sim-client')">
+            <rect class="node-rect color-sim" x="660" y="810" width="280" height="80" />
+            <text class="node-title" x="675" y="836">node-client (Docker)</text>
+            <text class="node-sub" x="675" y="856">IP: 172.28.0.3 / WireGuard</text>
+            <text class="node-sub" x="675" y="872">Dials Ports, SSH client, Ping</text>
+          </g>
+
+          <!-- Simulation Scenarios Runner -->
+          <g class="node-card" onclick="selectNode('sim-runner')">
+            <rect class="node-rect color-sim" x="970" y="810" width="350" height="80" />
+            <text class="node-title" x="985" y="836">Simulation Suite Runner</text>
+            <text class="node-sub" x="985" y="856">./scripts/simulate.sh (--all, --scenario)</text>
+            <text class="node-sub" x="985" y="872">8 Automated Verification Scenarios</text>
+          </g>
+        </g>
+
+        <!-- Connecting Flow Edges -->
+        <g id="edges">
+          <!-- UI to Kernel -->
+          <path id="edge-tui-kernel" class="edge-line" d="M 170 160 L 170 260" marker-end="url(#arrow)" />
+          <path id="edge-views-state" class="edge-line" d="M 540 160 L 540 210 L 1175 210 L 1175 260" marker-end="url(#arrow)" />
+          <path id="edge-views-tailcat" class="edge-line" d="M 540 160 L 540 210 L 845 210 L 845 260" marker-end="url(#arrow)" />
+          <path id="edge-web-plugin" class="edge-line" d="M 925 160 L 925 210 L 205 210 L 205 450" marker-end="url(#arrow)" />
+
+          <!-- Kernel to Plugins -->
+          <path id="edge-plugin-mgr" class="edge-line" d="M 505 350 L 505 400 L 205 400 L 205 450" marker-end="url(#arrow)" />
+          <path id="edge-logger-link" class="edge-line" d="M 505 350 L 505 450" marker-end="url(#arrow)" />
+          <path id="edge-scanner-link" class="edge-line" d="M 505 350 L 505 400 L 845 400 L 845 450" marker-end="url(#arrow)" />
+          <path id="edge-metrics-link" class="edge-line" d="M 505 350 L 505 400 L 1175 400 L 1175 450" marker-end="url(#arrow)" />
+
+          <!-- Kernel to Subprocesses -->
+          <path id="edge-tailcat-sub" class="edge-line" d="M 845 350 L 845 640" marker-end="url(#arrow)" />
+          <path id="edge-sub-sim" class="edge-line" d="M 660 720 L 660 760 L 200 760 L 200 810" marker-end="url(#arrow)" />
+        </g>
+
+        <!-- Animation Pulses -->
+        <circle id="pulse-1" class="flow-pulse" r="5" />
+        <circle id="pulse-2" class="flow-pulse" r="5" />
+        <circle id="pulse-3" class="flow-pulse" r="5" />
+      </svg>
+    </div>
+
+    <!-- Inspector Panel -->
+    <aside id="inspector">
+      <div class="inspector-header">
+        <div>
+          <h3 id="ins-title" class="inspector-title">OpenTUI Terminal Engine</h3>
+          <span id="ins-tag" class="inspector-tag" style="background:#1e3a5f;color:#60a5fa;">UI LAYER</span>
+        </div>
+        <button class="close-btn" onclick="closeInspector()">✕</button>
+      </div>
+
+      <div class="inspector-section">
+        <h4>Source File</h4>
+        <div id="ins-file" class="code-pill">src/tui/app.ts</div>
+      </div>
+
+      <div class="inspector-section">
+        <h4>Core Responsibilities</h4>
+        <ul id="ins-desc" class="list-items">
+          <li>Full OpenTUI terminal interface rendering with custom ANSI styling</li>
+          <li>Global hotkey routing ([1-8] tab select, [w] web toggle, [Tab] focus, [Enter] execute)</li>
+          <li>Coordinates 8 specialized view tabs and streams live session logs</li>
+        </ul>
+      </div>
+
+      <div class="inspector-section">
+        <h4>Input &amp; Output Contracts</h4>
+        <div id="ins-io" class="code-pill">stdin/stdout ANSI · AppState &rarr; Rendered Buffer</div>
+      </div>
+
+      <div class="inspector-section">
+        <h4>Subsystem Dependencies</h4>
+        <ul id="ins-deps" class="list-items">
+          <li><code>src/tui/state.ts</code> — Reactive State Store</li>
+          <li><code>src/services/tailcat.service.ts</code> — Subprocess Supervisor</li>
+          <li><code>src/services/plugin-manager.service.ts</code> — Dynamic Cordis Plugins</li>
+        </ul>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const nodeData = {
+      'opentui-app': {
+        title: 'OpenTUI Terminal Engine',
+        tag: 'UI LAYER',
+        tagBg: '#1e3a5f',
+        tagColor: '#60a5fa',
+        file: 'src/tui/app.ts',
+        desc: [
+          'Full OpenTUI terminal interface rendering with custom ANSI styling',
+          'Global hotkey routing ([1-8] tab select, [w] web toggle, [Tab] focus, [Enter] execute)',
+          'Coordinates 8 specialized view tabs and streams live session logs'
+        ],
+        io: 'stdin/stdout ANSI · AppState → Rendered Terminal Buffer',
+        deps: ['src/tui/state.ts', 'src/services/tailcat.service.ts', 'src/services/plugin-manager.service.ts']
+      },
+      'tui-views': {
+        title: 'OpenTUI View Components (Tabs 1-8)',
+        tag: 'UI COMPONENTS',
+        tagBg: '#1e3a5f',
+        tagColor: '#60a5fa',
+        file: 'src/tui/views/*.ts',
+        desc: [
+          'Tab 1 (PipeView): Raw stdin/stdout stream listener & client sender',
+          'Tab 2 (PortsView): Local TCP port serving & remote port dialing',
+          'Tab 3 (SSHView): Auth-free SSH server & remote client terminal connect',
+          'Tab 4 (FilesView): Drop box receiver, SFTP server & remote directory explorer',
+          'Tab 5 (DiagnosticsView): DERP vs Direct UDP Ping, SOCKS5 proxy, token resolver',
+          'Tab 6 (KeysView): WireGuard keypair generation & persistent key manager',
+          'Tab 7 (SessionsView): Process supervisor table & interactive kill hotkey [k]',
+          'Tab 8 (WebView): Dynamic Cordis plugin toggles & daemon management'
+        ],
+        io: 'View Render Functions (state: AppState) → ANSI String',
+        deps: ['src/tui/state.ts', 'src/services/tailcat.service.ts']
+      },
+      'web-dashboard': {
+        title: 'Browser Web Dashboard',
+        tag: 'WEB INTERFACE',
+        tagBg: '#1e3a5f',
+        tagColor: '#60a5fa',
+        file: 'src/services/web-server.plugin.ts',
+        desc: [
+          'Hosted on http://127.0.0.1:3840/ via Cordis webServer plugin',
+          'Provides 7 module tabs matching OpenTUI with dark-mode CSS styling',
+          'Exposes REST API `/api/sessions` for real-time JSON session synchronization'
+        ],
+        io: 'HTTP GET/POST · REST JSON API ↔ Client Browser',
+        deps: ['src/services/tailcat.service.ts', 'src/services/plugin-manager.service.ts']
+      },
+      'screenshot-engine': {
+        title: 'Visual Proof Generator',
+        tag: 'VERIFICATION',
+        tagBg: '#3f1d24',
+        tagColor: '#fb7185',
+        file: 'src/utils/terminal-screenshot.ts & web-screenshot.ts',
+        desc: [
+          'TerminalScreenshot: Converts ANSI terminal buffer into dark-mode styled window frame',
+          'WebScreenshot: Automates Headless Chrome + ffmpeg to capture Web Dashboard views',
+          'Emits verifiable screenshots to `screenshots/{tui,web,simulation}/**/*.webp`'
+        ],
+        io: 'Terminal State / Web URL → .webp visual proofs',
+        deps: ['tests/e2e/tui-screenshots.test.mjs', 'tests/e2e/web-screenshots.test.mjs']
+      },
+      'cordis-core': {
+        title: 'Cordis Micro-Kernel Context',
+        tag: 'MICRO-KERNEL',
+        tagBg: '#3b1d54',
+        tagColor: '#c084fc',
+        file: 'cordis/packages/core/src/context.ts',
+        desc: [
+          'Micro-kernel context hosting services with dependency injection',
+          'Provides event bus (`ctx.on`, `ctx.emit`) and plugin lifecycle hooks',
+          'Supports scoped context forks (`ctx.fork()`) with automatic resource disposal'
+        ],
+        io: 'Context injection & Event Pub/Sub',
+        deps: ['cordis/packages/core']
+      },
+      'plugin-manager': {
+        title: 'PluginManagerService',
+        tag: 'PLUGIN LIFECYCLE',
+        tagBg: '#3b1d54',
+        tagColor: '#c084fc',
+        file: 'src/services/plugin-manager.service.ts',
+        desc: [
+          'Maintains registry of dynamic plugins (`webServer`, `fileLogger`, `autoPortScanner`, `metricsCollector`)',
+          'Executes dynamic `fork.dispose()` on `disablePlugin()` to free resources instantly',
+          'Re-instantiates plugins on demand without restarting the TUI or kernel process'
+        ],
+        io: 'togglePlugin(name) → Fork/Dispose Lifecycle Transition',
+        deps: ['cordis/packages/core', 'src/services/*.plugin.ts']
+      },
+      'tailcat-service': {
+        title: 'TailcatService (Supervisor)',
+        tag: 'PROCESS SUPERVISOR',
+        tagBg: '#3b1d54',
+        tagColor: '#c084fc',
+        file: 'src/services/tailcat.service.ts',
+        desc: [
+          'Subprocess supervision for all active tailcat daemon instances',
+          'Captures real-time stdout/stderr log streams into ring buffers',
+          'Handles process spawning, graceful SIGTERM, and force SIGKILL'
+        ],
+        io: 'spawnTailcat(args) → ManagedProcess & SessionLogBuffer',
+        deps: ['src/utils/binary-resolver.ts', 'src/services/session.types.ts']
+      },
+      'state-store': {
+        title: 'Reactive State & Persistence',
+        tag: 'STATE MANAGEMENT',
+        tagBg: '#3b1d54',
+        tagColor: '#c084fc',
+        file: 'src/tui/state.ts',
+        desc: [
+          'Centralized reactive state holding form data, active tab, and session metrics',
+          'Auto-persists user preferences and keys to `~/.config/tailcat-tui/config.json`',
+          'Provides synchronized state between OpenTUI and Web views'
+        ],
+        io: 'createInitialState() · loadConfig() · saveConfig()',
+        deps: ['~/.config/tailcat-tui/config.json']
+      },
+      'plugin-web': {
+        title: 'webServer (TailcatWebPlugin)',
+        tag: 'DYNAMIC PLUGIN',
+        tagBg: '#064e3b',
+        tagColor: '#34d399',
+        file: 'src/services/web-server.plugin.ts',
+        desc: [
+          'Embedded HTTP server delivering web dashboard and JSON endpoints',
+          'Can be hot-toggled from Tab 8 or global keybinding `[w]`',
+          'Binds to dynamically allocated port from `autoPortScanner`'
+        ],
+        io: 'HTTP Server Socket (3840+) ↔ REST Requests',
+        deps: ['src/services/plugin-manager.service.ts', 'src/services/tailcat.service.ts']
+      },
+      'plugin-logger': {
+        title: 'fileLogger (FileLoggerPlugin)',
+        tag: 'DYNAMIC PLUGIN',
+        tagBg: '#064e3b',
+        tagColor: '#34d399',
+        file: 'src/services/file-logger.plugin.ts',
+        desc: [
+          'Intercepts all session stdout/stderr lines from `TailcatService`',
+          'Persists session transcripts into `~/.config/tailcat-tui/logs/session-{id}.log`',
+          'Disposed cleanly on toggle without dangling file descriptors'
+        ],
+        io: 'SessionLogEvent → Disk Append Stream',
+        deps: ['src/services/tailcat.service.ts']
+      },
+      'plugin-port': {
+        title: 'autoPortScanner (AutoPortScannerPlugin)',
+        tag: 'DYNAMIC PLUGIN',
+        tagBg: '#064e3b',
+        tagColor: '#34d399',
+        file: 'src/services/auto-port-scanner.plugin.ts',
+        desc: [
+          'Probes TCP sockets sequentially starting from base port 3840',
+          'Detects port conflicts and automatically allocates next available port',
+          'Feeds allocated port to `webServer` plugin'
+        ],
+        io: 'probePort(3840) → Next Free TCP Port',
+        deps: ['src/utils/port-scanner.ts']
+      },
+      'plugin-metrics': {
+        title: 'metricsCollector (MetricsCollectorPlugin)',
+        tag: 'DYNAMIC PLUGIN',
+        tagBg: '#064e3b',
+        tagColor: '#34d399',
+        file: 'src/services/metrics-collector.plugin.ts',
+        desc: [
+          'Parses tailcat ping diagnostics output in real-time',
+          'Measures direct UDP path upgrade vs DERP relay fallback latencies',
+          'Pushes metrics to OpenTUI Diagnostics view and Web API'
+        ],
+        io: 'Diagnostic Log Stream → Latency & Route Telemetry',
+        deps: ['src/services/tailcat.service.ts']
+      },
+      'binary-resolver': {
+        title: 'Binary Resolver & Daemon Manager',
+        tag: 'SYSTEM INTEGRATION',
+        tagBg: '#451a03',
+        tagColor: '#fbbf24',
+        file: 'src/utils/binary-resolver.ts & daemon-manager.ts',
+        desc: [
+          'Discovers `tailcat` executable across PATH, `./bin/`, and submodule output',
+          'DaemonManager enables running Web Dashboard in detached background process',
+          'Stores detached daemon PID in `~/.config/tailcat-tui/web-server.pid`'
+        ],
+        io: 'resolveTailcatBinary() → Absolute Executable Path',
+        deps: ['process.env.PATH', 'submodules/tailcat']
+      },
+      'subprocesses': {
+        title: 'Spawned Tailcat Subprocesses',
+        tag: 'SUBPROCESS POOL',
+        tagBg: '#451a03',
+        tagColor: '#fbbf24',
+        file: 'tailcat sub-daemons',
+        desc: [
+          'Concurrent tailcat instances executing: pipe, serve-port, dial-port, ssh, drop-box, sftp, ping',
+          'Bound to WireGuard keys with ephemeral or fixed DERP configurations',
+          'Live streams piped to OpenTUI log pane & file logger'
+        ],
+        io: 'stdin/stdout pipes · WireGuard encrypted network frames',
+        deps: ['src/services/tailcat.service.ts']
+      },
+      'daemon-mode': {
+        title: 'Detached Background Daemon',
+        tag: 'PROCESS RUNNER',
+        tagBg: '#451a03',
+        tagColor: '#fbbf24',
+        file: 'src/utils/daemon-manager.ts',
+        desc: [
+          'Spawns detached node background worker running Web Dashboard',
+          'PID recorded in `~/.config/tailcat-tui/web-server.pid`',
+          'Status and stop commands accessible from OpenTUI Tab 8'
+        ],
+        io: 'spawnDetached() / stopDetached()',
+        deps: ['~/.config/tailcat-tui/web-server.pid']
+      },
+      'sim-server': {
+        title: 'node-server (Docker Node)',
+        tag: 'SIMULATION TOPOLOGY',
+        tagBg: '#4c0519',
+        tagColor: '#fb7185',
+        file: 'docker/docker-compose.yml (node-server)',
+        desc: [
+          'Primary simulation server running on 172.28.0.2',
+          'Executes pipe listeners, local port servers, auth-free SSH daemon, and SFTP directory share',
+          'Connected to custom DERPer relay container'
+        ],
+        io: 'Docker Bridge Network (172.28.0.0/16)',
+        deps: ['docker/Dockerfile.node', 'scripts/simulate.sh']
+      },
+      'sim-derper': {
+        title: 'tailcat-sim-derper (Relay)',
+        tag: 'SIMULATION TOPOLOGY',
+        tagBg: '#4c0519',
+        tagColor: '#fb7185',
+        file: 'docker/docker-compose.yml (derper)',
+        desc: [
+          'Custom STUN & DERP relay container simulating DERP relay routing',
+          'Binds TCP 3340 (DERP HTTP/HTTPS) and UDP 3478 (STUN)',
+          'Allows testing DERP-only mode and direct UDP hole-punch upgrades'
+        ],
+        io: 'TCP 3340 · UDP 3478 Relay Traffic',
+        deps: ['docker/Dockerfile.derper']
+      },
+      'sim-client': {
+        title: 'node-client (Docker Node)',
+        tag: 'SIMULATION TOPOLOGY',
+        tagBg: '#4c0519',
+        tagColor: '#fb7185',
+        file: 'docker/docker-compose.yml (node-client)',
+        desc: [
+          'Client testing node running on 172.28.0.3',
+          'Connects to `node-server` via WireGuard key exchange',
+          'Executes pipe streaming payload sender, port dialer, SSH client, and Ping tests'
+        ],
+        io: 'Docker Bridge Network (172.28.0.0/16)',
+        deps: ['docker/Dockerfile.node', 'scripts/simulate.sh']
+      },
+      'sim-runner': {
+        title: 'Simulation Suite Runner',
+        tag: 'AUTOMATION',
+        tagBg: '#4c0519',
+        tagColor: '#fb7185',
+        file: 'scripts/simulate.sh',
+        desc: [
+          'Automated execution of 8 end-to-end integration scenarios matching tailcat/README.md',
+          'Supports flags: `--all`, `--scenario <name>`, `--derp`',
+          'Verifies exit codes and communication integrity across Docker containers'
+        ],
+        io: 'CLI Runner → Scenario Assertions (Pass/Fail)',
+        deps: ['tests/simulation.test.mjs', 'docker/docker-compose.yml']
+      }
+    };
+
+    let selectedNodeId = 'opentui-app';
+    let simulationRunning = false;
+    let simInterval = null;
+
+    function selectNode(id) {
+      selectedNodeId = id;
+      const data = nodeData[id];
+      if (!data) return;
+
+      // Update inspector
+      document.getElementById('ins-title').innerText = data.title;
+      const tagEl = document.getElementById('ins-tag');
+      tagEl.innerText = data.tag;
+      tagEl.style.backgroundColor = data.tagBg;
+      tagEl.style.color = data.tagColor;
+      document.getElementById('ins-file').innerText = data.file;
+      
+      const descEl = document.getElementById('ins-desc');
+      descEl.innerHTML = '';
+      data.desc.forEach(item => {
+        const li = document.createElement('li');
+        li.innerText = item;
+        descEl.appendChild(li);
+      });
+
+      document.getElementById('ins-io').innerText = data.io;
+
+      const depsEl = document.getElementById('ins-deps');
+      depsEl.innerHTML = '';
+      data.deps.forEach(dep => {
+        const li = document.createElement('li');
+        li.innerHTML = '<code>' + dep + '</code>';
+        depsEl.appendChild(li);
+      });
+
+      // Highlight selected node in SVG
+      document.querySelectorAll('.node-card').forEach(el => el.classList.remove('selected'));
+      const activeCard = Array.from(document.querySelectorAll('.node-card')).find(el => 
+        el.getAttribute('onclick') && el.getAttribute('onclick').includes(id)
+      );
+      if (activeCard) activeCard.classList.add('selected');
+
+      document.getElementById('inspector').classList.remove('collapsed');
+    }
+
+    function closeInspector() {
+      document.getElementById('inspector').classList.add('collapsed');
+      document.querySelectorAll('.node-card').forEach(el => el.classList.remove('selected'));
+    }
+
+    function filterTier(tier) {
+      document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      const groups = {
+        'ui': '#tier-ui',
+        'kernel': '#tier-kernel',
+        'plugins': '#tier-plugins',
+        'supervisor': '#tier-supervisor',
+        'simulation': '#tier-simulation'
+      };
+
+      if (tier === 'all') {
+        document.querySelectorAll('.tier-group').forEach(el => el.style.opacity = '1');
+        document.querySelectorAll('.edge-line').forEach(el => el.style.opacity = '1');
+      } else {
+        document.querySelectorAll('.tier-group').forEach(el => el.style.opacity = '0.2');
+        document.querySelectorAll('.edge-line').forEach(el => el.style.opacity = '0.1');
+        const target = document.querySelector(groups[tier]);
+        if (target) target.style.opacity = '1';
+      }
+    }
+
+    function toggleSimulation() {
+      simulationRunning = !simulationRunning;
+      const btn = document.getElementById('sim-toggle-btn');
+      const icon = document.getElementById('sim-icon');
+
+      if (simulationRunning) {
+        btn.classList.add('running');
+        btn.innerHTML = '<span id="sim-icon">⏹</span> Stop Flow';
+        startFlowAnimation();
+      } else {
+        btn.classList.remove('running');
+        btn.innerHTML = '<span id="sim-icon">▶</span> Simulate Flow';
+        stopFlowAnimation();
+      }
+    }
+
+    function startFlowAnimation() {
+      const edges = document.querySelectorAll('.edge-line');
+      edges.forEach(e => e.classList.add('active'));
+
+      let step = 0;
+      const steps = [
+        { pulse: '#pulse-1', x: 170, y: 160, tx: 170, ty: 260 },
+        { pulse: '#pulse-2', x: 505, y: 350, tx: 205, ty: 450 },
+        { pulse: '#pulse-3', x: 845, y: 350, tx: 845, ty: 640 }
+      ];
+
+      simInterval = setInterval(() => {
+        steps.forEach((s, idx) => {
+          const p = document.querySelector(s.pulse);
+          if (p) {
+            p.style.opacity = '1';
+            const progress = (step % 20) / 20;
+            const curX = s.x + (s.tx - s.x) * progress;
+            const curY = s.y + (s.ty - s.y) * progress;
+            p.setAttribute('cx', curX);
+            p.setAttribute('cy', curY);
+          }
+        });
+        step++;
+      }, 50);
+    }
+
+    function stopFlowAnimation() {
+      clearInterval(simInterval);
+      document.querySelectorAll('.edge-line').forEach(e => e.classList.remove('active'));
+      document.querySelectorAll('.flow-pulse').forEach(p => p.style.opacity = '0');
+    }
+
+    // Default select
+    selectNode('opentui-app');
+  </script>
+</body>
+</html>

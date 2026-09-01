@@ -1,0 +1,31 @@
+FROM golang:1.24-alpine AS builder
+
+ENV GOTOOLCHAIN=auto
+WORKDIR /src
+COPY tailcat/go.mod tailcat/go.sum ./
+RUN go mod download
+COPY tailcat/ ./
+RUN CGO_ENABLED=0 go build -tags "$(cat build-tags.txt)" -ldflags "-s -w" -o /bin/tailcat ./cmd/tailcat
+
+FROM alpine:3.21
+
+RUN apk add --no-cache \
+    bash \
+    curl \
+    openssh-client \
+    openssh-server \
+    openssh-sftp-server \
+    busybox-extras \
+    socat \
+    jq \
+    coreutils \
+    iputils \
+    procps \
+    ca-certificates
+
+COPY --from=builder /bin/tailcat /usr/local/bin/tailcat
+
+RUN mkdir -p /var/run/tailcat-exchange /root/.config/tailcat /inbox /srv/files
+
+WORKDIR /root
+CMD ["sleep", "infinity"]

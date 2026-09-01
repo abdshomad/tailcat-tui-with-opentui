@@ -1,0 +1,705 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tailcat Multi-Node Simulation - Archify Interactive Visualizer</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-border: #30363d;
+      --text: #c9d1d9;
+      --text-bright: #f0f6fc;
+      --text-muted: #8b949e;
+      --accent-cyan: #38bdf8;
+      --accent-green: #34d399;
+      --accent-purple: #c084fc;
+      --accent-amber: #fbbf24;
+      --accent-rose: #fb7185;
+      --accent-blue: #60a5fa;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #f43f5e, #8b5cf6);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    .scenario-selector {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      max-width: 65%;
+      padding: 4px;
+    }
+
+    .sc-btn {
+      background: #21262d;
+      border: 1px solid var(--surface-border);
+      color: var(--text);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .sc-btn:hover, .sc-btn.active {
+      background: #30363d;
+      color: var(--text-bright);
+      border-color: var(--accent-rose);
+      box-shadow: 0 0 8px rgba(251, 113, 133, 0.4);
+    }
+
+    .sim-btn {
+      background: #3f1d24;
+      border: 1px solid var(--accent-rose);
+      color: var(--accent-rose);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .sim-btn:hover {
+      background: var(--accent-rose);
+      color: #0f172a;
+    }
+
+    .sim-btn.running {
+      background: #065f46;
+      border-color: #34d399;
+      color: #34d399;
+    }
+
+    main {
+      display: flex;
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #viewport {
+      flex: 1;
+      height: 100%;
+      overflow: auto;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, #161b22 1px, transparent 1px);
+      background-size: 24px 24px;
+      padding: 30px;
+    }
+
+    svg#sim-canvas {
+      min-width: 1100px;
+      min-height: 720px;
+      display: block;
+    }
+
+    /* Inspector Drawer */
+    #inspector {
+      width: 440px;
+      background: var(--surface);
+      border-left: 1px solid var(--surface-border);
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      overflow-y: auto;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.5);
+      z-index: 5;
+    }
+
+    .inspector-header {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .inspector-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .badge-tui { background: #1e3a5f; color: #60a5fa; border: 1px solid #2563eb; }
+    .badge-web { background: #064e3b; color: #34d399; border: 1px solid #059669; }
+    .badge-proto { background: #451a03; color: #fbbf24; border: 1px solid #d97706; }
+
+    .inspector-section {
+      margin-bottom: 18px;
+    }
+
+    .inspector-section h4 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .code-pill {
+      background: #0d1117;
+      border: 1px solid var(--surface-border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-cyan);
+      word-break: break-all;
+    }
+
+    .list-items {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .list-items li {
+      position: relative;
+      padding-left: 18px;
+      line-height: 1.4;
+    }
+
+    .list-items li::before {
+      content: '➔';
+      position: absolute;
+      left: 0;
+      color: var(--accent-rose);
+      font-size: 11px;
+    }
+
+    /* SVG Elements */
+    .container-box {
+      fill: rgba(22, 27, 34, 0.8);
+      stroke: var(--surface-border);
+      stroke-width: 1.5;
+      rx: 12;
+    }
+
+    .container-header {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      fill: var(--text-bright);
+    }
+
+    .container-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      fill: var(--text-muted);
+    }
+
+    .flow-card {
+      fill: #1c2128;
+      stroke: var(--surface-border);
+      stroke-width: 1.5;
+      rx: 8;
+    }
+
+    .flow-title {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 600;
+      fill: var(--text-bright);
+    }
+
+    .flow-cmd {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      fill: var(--accent-cyan);
+    }
+
+    .packet-path {
+      fill: none;
+      stroke: #30363d;
+      stroke-width: 2;
+      stroke-dasharray: 6, 6;
+      transition: stroke 0.3s;
+    }
+
+    .packet-path.active {
+      stroke: var(--accent-rose);
+      stroke-width: 3;
+      stroke-dasharray: none;
+    }
+
+    .packet-pulse {
+      fill: var(--accent-rose);
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span class="brand-badge">ARCHIFY</span>
+      <h1>Multi-Node Simulation Protocol Explorer</h1>
+    </div>
+
+    <div class="scenario-selector">
+      <button class="sc-btn active" onclick="loadScenario('01')">01. Pipe</button>
+      <button class="sc-btn" onclick="loadScenario('02')">02. Ports</button>
+      <button class="sc-btn" onclick="loadScenario('03')">03. SSH</button>
+      <button class="sc-btn" onclick="loadScenario('04')">04. Files</button>
+      <button class="sc-btn" onclick="loadScenario('05')">05. Ping</button>
+      <button class="sc-btn" onclick="loadScenario('06')">06. Proxy</button>
+      <button class="sc-btn" onclick="loadScenario('07')">07. Keys ACL</button>
+      <button class="sc-btn" onclick="loadScenario('08')">08. Tokens</button>
+    </div>
+
+    <button id="sim-btn" class="sim-btn" onclick="toggleSim()">
+      <span id="sim-icon">▶</span> Packet Sim
+    </button>
+  </header>
+
+  <main>
+    <div id="viewport">
+      <svg id="sim-canvas" viewBox="0 0 1080 700">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 8 5 L 0 9 z" fill="#4b5563" />
+          </marker>
+          <marker id="arrow-rose" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 8 5 L 0 9 z" fill="#fb7185" />
+          </marker>
+        </defs>
+
+        <!-- Network Container Frame -->
+        <rect class="container-box" x="20" y="20" width="1040" height="660" style="stroke-dasharray: 4 4; fill: rgba(13, 17, 23, 0.4);" />
+        <text class="container-header" x="40" y="48" fill="#8b949e">Docker Network: tailcat-net (172.28.0.0/16)</text>
+
+        <!-- 1. Node Server -->
+        <g id="node-server-group">
+          <rect class="container-box" x="50" y="80" width="280" height="560" style="stroke: #3b82f6;" />
+          <text class="container-header" x="70" y="115">node-server</text>
+          <text class="container-sub" x="70" y="135">IP: 172.28.0.2 / WireGuard</text>
+
+          <g id="svr-card-1">
+            <rect class="flow-card" x="70" y="160" width="240" height="80" />
+            <text id="svr-step1-title" class="flow-title" x="85" y="190">1. Server Listener</text>
+            <text id="svr-step1-cmd" class="flow-cmd" x="85" y="215">tailcat pipe</text>
+          </g>
+
+          <g id="svr-card-2">
+            <rect class="flow-card" x="70" y="270" width="240" height="80" />
+            <text id="svr-step2-title" class="flow-title" x="85" y="300">Token &amp; Netstack</text>
+            <text id="svr-step2-cmd" class="flow-cmd" x="85" y="325">Extracts Token &amp; Region</text>
+          </g>
+
+          <g id="svr-card-3">
+            <rect class="flow-card" x="70" y="380" width="240" height="80" />
+            <text id="svr-step3-title" class="flow-title" x="85" y="410">Tunnel Receiver Pool</text>
+            <text id="svr-step3-cmd" class="flow-cmd" x="85" y="435">WireGuard Session Rx</text>
+          </g>
+
+          <g id="svr-card-4">
+            <rect class="flow-card" x="70" y="490" width="240" height="80" />
+            <text id="svr-step4-title" class="flow-title" x="85" y="520">Output Verification</text>
+            <text id="svr-step4-cmd" class="flow-cmd" x="85" y="545">stdout / fs assertion</text>
+          </g>
+        </g>
+
+        <!-- 2. DERPer Relay -->
+        <g id="node-derper-group">
+          <rect class="container-box" x="400" y="180" width="280" height="340" style="stroke: #a855f7;" />
+          <text class="container-header" x="420" y="215">tailcat-sim-derper</text>
+          <text class="container-sub" x="420" y="235">IP: 172.28.0.4 · STUN &amp; Relay</text>
+
+          <rect class="flow-card" x="420" y="260" width="240" height="70" />
+          <text class="flow-title" x="435" y="290">STUN Endpoint</text>
+          <text class="flow-cmd" x="435" y="310">UDP 3478 / DiscoKey</text>
+
+          <rect class="flow-card" x="420" y="350" width="240" height="70" />
+          <text class="flow-title" x="435" y="380">DERP HTTP/S Relay</text>
+          <text class="flow-cmd" x="435" y="400">TCP 3340 / Region 302</text>
+
+          <rect class="flow-card" x="420" y="440" width="240" height="60" />
+          <text class="flow-title" x="435" y="468">Direct Upgrade Broker</text>
+          <text class="flow-cmd" x="435" y="488">Coordinates UDP hole-punch</text>
+        </g>
+
+        <!-- 3. Node Client -->
+        <g id="node-client-group">
+          <rect class="container-box" x="750" y="80" width="280" height="560" style="stroke: #10b981;" />
+          <text class="container-header" x="770" y="115">node-client</text>
+          <text class="container-sub" x="770" y="135">IP: 172.28.0.3 / WireGuard</text>
+
+          <g id="cli-card-1">
+            <rect class="flow-card" x="770" y="160" width="240" height="80" />
+            <text id="cli-step1-title" class="flow-title" x="785" y="190">1. Exchange Reader</text>
+            <text id="cli-step1-cmd" class="flow-cmd" x="785" y="215">Reads /var/run/token</text>
+          </g>
+
+          <g id="cli-card-2">
+            <rect class="flow-card" x="770" y="270" width="240" height="80" />
+            <text id="cli-step2-title" class="flow-title" x="785" y="300">2. WireGuard Dialer</text>
+            <text id="cli-step2-cmd" class="flow-cmd" x="785" y="325">tailcat pipe &lt;token&gt;</text>
+          </g>
+
+          <g id="cli-card-3">
+            <rect class="flow-card" x="770" y="380" width="240" height="80" />
+            <text id="cli-step3-title" class="flow-title" x="785" y="410">3. Payload Transmitter</text>
+            <text id="cli-step3-cmd" class="flow-cmd" x="785" y="435">Encrypted tunnel bytes</text>
+          </g>
+
+          <g id="cli-card-4">
+            <rect class="flow-card" x="770" y="490" width="240" height="80" />
+            <text id="cli-step4-title" class="flow-title" x="785" y="520">4. Exit Assertions</text>
+            <text id="cli-step4-cmd" class="flow-cmd" x="785" y="545">Exit code 0 &amp; latency</text>
+          </g>
+        </g>
+
+        <!-- Network Connecting Paths -->
+        <g id="network-paths">
+          <!-- Server to Relay -->
+          <path id="path-svr-derp" class="packet-path" d="M 310 300 L 400 300" marker-end="url(#arrow)" />
+          <!-- Client to Relay -->
+          <path id="path-cli-derp" class="packet-path" d="M 770 310 L 680 310" marker-end="url(#arrow)" />
+          <!-- Direct P2P Tunnel -->
+          <path id="path-direct-p2p" class="packet-path" d="M 770 420 L 540 600 L 310 420" marker-end="url(#arrow)" />
+        </g>
+
+        <!-- Animated Packets -->
+        <circle id="pkt-1" class="packet-pulse" r="6" />
+        <circle id="pkt-2" class="packet-pulse" r="6" />
+      </svg>
+    </div>
+
+    <!-- Inspector Panel -->
+    <aside id="inspector">
+      <div class="inspector-header">
+        <h3 id="sc-title" class="inspector-title">Scenario 01: Pipe &amp; Raw Stream</h3>
+        <div class="badge-row">
+          <span id="sc-tui-badge" class="badge badge-tui">OpenTUI: Tab 1 (PipeView)</span>
+          <span id="sc-web-badge" class="badge badge-web">Web: /?tab=pipe</span>
+          <span id="sc-proto-badge" class="badge badge-proto">Protocol: Raw Stdin/Stdout</span>
+        </div>
+      </div>
+
+      <div class="inspector-section">
+        <h4>Scenario Script</h4>
+        <div id="sc-file" class="code-pill">scripts/scenarios/01-pipe-stream.sh</div>
+      </div>
+
+      <div class="inspector-section">
+        <h4>Execution Sequence</h4>
+        <ul id="sc-steps" class="list-items">
+          <li><strong>Step 1</strong>: <code>node-server</code> starts raw pipe listener <code>tailcat pipe</code>.</li>
+          <li><strong>Step 2</strong>: Listener acquires server connection token and registers on DERP relay.</li>
+          <li><strong>Step 3</strong>: <code>node-client</code> streams payload string across WireGuard session.</li>
+          <li><strong>Step 4</strong>: <code>node-server</code> unblocks and echoes exact payload to stdout.</li>
+        </ul>
+      </div>
+
+      <div class="inspector-section">
+        <h4>Automated CLI Runner</h4>
+        <div id="sc-runner" class="code-pill">./scripts/simulate.sh --scenario 01</div>
+      </div>
+
+      <div class="inspector-section">
+        <h4>OpenTUI &amp; Cordis Integration</h4>
+        <div id="sc-ui-desc" style="font-size: 13px; line-height: 1.5; color: var(--text);">
+          Managed interactively via OpenTUI Tab 1 (Pipe / Stream) and monitored live through Cordis Web Dashboard <code>/?tab=pipe</code>.
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const scenarioData = {
+      '01': {
+        title: 'Scenario 01: Pipe & Raw Stream',
+        tuiBadge: 'OpenTUI: Tab 1 (PipeView)',
+        webBadge: 'Web: /?tab=pipe',
+        protoBadge: 'Protocol: Raw Stdin/Stdout',
+        file: 'scripts/scenarios/01-pipe-stream.sh',
+        runner: './scripts/simulate.sh --scenario 01',
+        svrCmds: ['tailcat pipe', 'Extracts Token', 'WireGuard Session Rx', 'Verifies payload delivery'],
+        cliCmds: ['Reads /var/run/token', 'tailcat pipe <token>', 'Streams string payload', 'Asserts exit 0'],
+        steps: [
+          '<strong>Step 1</strong>: <code>node-server</code> starts raw pipe listener <code>tailcat pipe</code>.',
+          '<strong>Step 2</strong>: Listener acquires connection token and registers on DERPer relay.',
+          '<strong>Step 3</strong>: <code>node-client</code> dials token and pipes stream payload.',
+          '<strong>Step 4</strong>: <code>node-server</code> receives exact bytes and unblocks cleanly.'
+        ],
+        uiDesc: 'OpenTUI Tab 1 (PipeView) allows sending ad-hoc payloads or streaming files. Supervised in Cordis Web Dashboard at <code>/?tab=pipe</code>.'
+      },
+      '02': {
+        title: 'Scenario 02: Port Forwarding (8080)',
+        tuiBadge: 'OpenTUI: Tab 2 (PortsView)',
+        webBadge: 'Web: /?tab=ports',
+        protoBadge: 'Protocol: Userspace TCP Tunnel',
+        file: 'scripts/scenarios/02-port-forward.sh',
+        runner: './scripts/simulate.sh --scenario 02',
+        svrCmds: ['tailcat serve-port 8080', 'Binds local HTTP service', 'Netstack TCP listener', 'Responds to HTTP GET'],
+        cliCmds: ['Reads Port Token', 'tailcat dial-port <token>', 'Executes curl over tunnel', 'Asserts HTTP 200 response'],
+        steps: [
+          '<strong>Step 1</strong>: <code>node-server</code> runs local HTTP daemon on port 8080 and exposes it via <code>tailcat serve-port 8080</code>.',
+          '<strong>Step 2</strong>: Connection token written to shared exchange volume.',
+          '<strong>Step 3</strong>: <code>node-client</code> dials remote port token and issues HTTP curl request.',
+          '<strong>Step 4</strong>: Verifies HTTP 200 payload returned over userspace tunnel without host network exposure.'
+        ],
+        uiDesc: 'OpenTUI Tab 2 provides interactive local port serving and remote dial controls. Managed via Web Dashboard at <code>/?tab=ports</code>.'
+      },
+      '03': {
+        title: 'Scenario 03: Auth-Free SSH Server',
+        tuiBadge: 'OpenTUI: Tab 3 (SSHView)',
+        webBadge: 'Web: /?tab=ssh',
+        protoBadge: 'Protocol: Auth-Free / ACL SSH',
+        file: 'scripts/scenarios/03-auth-free-ssh.sh',
+        runner: './scripts/simulate.sh --scenario 03',
+        svrCmds: ['tailcat ssh', 'Spawns userspace SSH daemon', 'WireGuard authenticated session', 'Executes remote shell cmd'],
+        cliCmds: ['Reads SSH Token', 'tailcat ssh <token> id', 'Dispatches shell command', 'Asserts uid=0(root) output'],
+        steps: [
+          '<strong>Step 1</strong>: <code>node-server</code> starts userspace SSH daemon via <code>tailcat ssh</code> (zero inbound open firewall ports).',
+          '<strong>Step 2</strong>: Generates single-use connection token.',
+          '<strong>Step 3</strong>: <code>node-client</code> executes remote command <code>id</code> over encrypted WireGuard tunnel.',
+          '<strong>Step 4</strong>: Asserts clean command execution and terminal output.'
+        ],
+        uiDesc: 'OpenTUI Tab 3 supports auth-free daemon spawning and client remote connect. Managed in Web Dashboard at <code>/?tab=ssh</code>.'
+      },
+      '04': {
+        title: 'Scenario 04: Files, Drop Box & SFTP',
+        tuiBadge: 'OpenTUI: Tab 4 (FilesView)',
+        webBadge: 'Web: /?tab=files',
+        protoBadge: 'Protocol: SFTP & Drop Box',
+        file: 'scripts/scenarios/04-file-sftp.sh',
+        runner: './scripts/simulate.sh --scenario 04',
+        svrCmds: ['tailcat recv /inbox & serve files', 'Receives uploaded files', 'Exposes SFTP directory /srv', 'Transfers file metadata'],
+        cliCmds: ['tailcat cp <file> <token>', 'tailcat ls <token>', 'Uploads drop box files', 'Lists remote directories'],
+        steps: [
+          '<strong>Part A</strong>: <code>node-server</code> hosts write-only drop box (<code>tailcat recv /inbox</code>); client uploads <code>sample.txt</code>.',
+          '<strong>Part B</strong>: <code>node-server</code> spawns SFTP server (<code>tailcat serve files /srv/files</code>).',
+          '<strong>Part C</strong>: <code>node-client</code> lists remote directory via <code>tailcat ls</code> and downloads file via <code>tailcat cp</code>.'
+        ],
+        uiDesc: 'OpenTUI Tab 4 provides inbox monitoring, SFTP hosting, and file transfers. Managed via Web Dashboard at <code>/?tab=files</code>.'
+      },
+      '05': {
+        title: 'Scenario 05: Diagnostics & Ping',
+        tuiBadge: 'OpenTUI: Tab 5 (DiagnosticsView)',
+        webBadge: 'Web: /?tab=diag',
+        protoBadge: 'Protocol: ICMP/DERP Telemetry',
+        file: 'scripts/scenarios/05-ping-diagnostics.sh',
+        runner: './scripts/simulate.sh --scenario 05',
+        svrCmds: ['tailcat ping listener', 'Registers on DERP 302', 'Echoes latency probes', 'Tracks path upgrade'],
+        cliCmds: ['tailcat ping <token>', 'Measures round-trip time', 'Validates pong response', 'Asserts DERP vs UDP path'],
+        steps: [
+          '<strong>Step 1</strong>: <code>node-server</code> starts ping target listener.',
+          '<strong>Step 2</strong>: <code>node-client</code> sends ping probes across DERP relay.',
+          '<strong>Step 3</strong>: Measures round-trip latency in microseconds.',
+          '<strong>Step 4</strong>: Asserts pong response and tests direct UDP path upgrade.'
+        ],
+        uiDesc: 'OpenTUI Tab 5 shows real-time ping latency histograms and relay path status. Monitored in Web Dashboard at <code>/?tab=diag</code>.'
+      },
+      '06': {
+        title: 'Scenario 06: SOCKS5 Proxy Runner',
+        tuiBadge: 'OpenTUI: Tab 5 (Proxy Runner)',
+        webBadge: 'Web: /?tab=diag',
+        protoBadge: 'Protocol: SOCKS5 Userspace Tunnel',
+        file: 'scripts/scenarios/06-socks5-proxy.sh',
+        runner: './scripts/simulate.sh --scenario 06',
+        svrCmds: ['Local HTTP server on 8080', 'Hosts internal payload', 'Responds to proxy traffic', 'Zero external routes'],
+        cliCmds: ['tailcat run --socks5 curl ...', 'Wraps arbitrary CLI tool', 'Routes TCP over SOCKS5', 'Asserts successful fetch'],
+        steps: [
+          '<strong>Step 1</strong>: <code>node-server</code> exposes an internal HTTP server accessible only via tunnel.',
+          '<strong>Step 2</strong>: <code>node-client</code> wraps <code>curl</code> using <code>tailcat run</code> command runner.',
+          '<strong>Step 3</strong>: Transparently routes curl TCP sockets through userspace SOCKS5 proxy.',
+          '<strong>Step 4</strong>: Asserts clean HTTP response and zero host network pollution.'
+        ],
+        uiDesc: 'OpenTUI Diagnostics view enables wrapping command-line tools into transient SOCKS5 proxy sessions.'
+      },
+      '07': {
+        title: 'Scenario 07: Key Management & WireGuard ACL',
+        tuiBadge: 'OpenTUI: Tab 6 (KeysView)',
+        webBadge: 'Web: /?tab=keys',
+        protoBadge: 'Protocol: WireGuard Key ACL',
+        file: 'scripts/scenarios/07-key-management-acl.sh',
+        runner: './scripts/simulate.sh --scenario 07',
+        svrCmds: ['tailcat --allow=nodekey:...', 'Restricts server to approved keys', 'Accepts authorized handshake', 'Rejects unauthorized peers'],
+        cliCmds: ['tailcat genkey client', 'Saves identity keypair', 'Connects with authorized key', 'Verifies rejection of rogue key'],
+        steps: [
+          '<strong>Step 1</strong>: Generates saved client identity keypair (<code>nodekey:...</code>).',
+          '<strong>Step 2</strong>: <code>node-server</code> enforces <code>--allow=nodekey:...</code> ACL policy.',
+          '<strong>Step 3</strong>: Authorized client connects and verifies communication.',
+          '<strong>Step 4</strong>: Rogue client with unauthorized ephemeral key is rejected.'
+        ],
+        uiDesc: 'OpenTUI Tab 6 generates, manages, and assigns WireGuard private keys to sessions. Handled in Web Dashboard at <code>/?tab=keys</code>.'
+      },
+      '08': {
+        title: 'Scenario 08: Token Parse & Self-Contained Resolve',
+        tuiBadge: 'OpenTUI: Tab 5 (Token Parser)',
+        webBadge: 'Web: /?tab=diag',
+        protoBadge: 'Protocol: Token Metadata Parser',
+        file: 'scripts/scenarios/08-token-parse-resolve.sh',
+        runner: './scripts/simulate.sh --scenario 08',
+        svrCmds: ['tailcat pipe (fixed region 302)', 'Generates regional token', 'Embeds ServerPublic & DiscoKey', 'Embeds DERP RegionID'],
+        cliCmds: ['tailcat parse <token>', 'tailcat resolve <token>', 'Extracts JSON metadata', 'Verifies self-contained token'],
+        steps: [
+          '<strong>Step 1</strong>: Generates token with fixed DERP region metadata.',
+          '<strong>Step 2</strong>: <code>tailcat parse</code> extracts <code>ServerPublic</code>, <code>ServerDiscoPublic</code>, and <code>RegionID</code> to JSON.',
+          '<strong>Step 3</strong>: <code>tailcat resolve</code> converts short token into self-contained address token.',
+          '<strong>Step 4</strong>: Asserts valid JSON structure and successful resolution.'
+        ],
+        uiDesc: 'OpenTUI Tab 5 includes an embedded token parser & resolver tool. Monitored in Web Dashboard at <code>/?tab=diag</code>.'
+      }
+    };
+
+    let currentSc = '01';
+    let simActive = false;
+    let animTimer = null;
+
+    function loadScenario(scId) {
+      currentSc = scId;
+      const data = scenarioData[scId];
+      if (!data) return;
+
+      // Update button highlights
+      document.querySelectorAll('.sc-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      // Update inspector
+      document.getElementById('sc-title').innerText = data.title;
+      document.getElementById('sc-tui-badge').innerText = data.tuiBadge;
+      document.getElementById('sc-web-badge').innerText = data.webBadge;
+      document.getElementById('sc-proto-badge').innerText = data.protoBadge;
+      document.getElementById('sc-file').innerText = data.file;
+      document.getElementById('sc-runner').innerText = data.runner;
+      document.getElementById('sc-ui-desc').innerHTML = data.uiDesc;
+
+      const stepsEl = document.getElementById('sc-steps');
+      stepsEl.innerHTML = '';
+      data.steps.forEach(s => {
+        const li = document.createElement('li');
+        li.innerHTML = s;
+        stepsEl.appendChild(li);
+      });
+
+      // Update SVG card labels
+      document.getElementById('svr-step1-cmd').innerText = data.svrCmds[0];
+      document.getElementById('svr-step2-cmd').innerText = data.svrCmds[1];
+      document.getElementById('svr-step3-cmd').innerText = data.svrCmds[2];
+      document.getElementById('svr-step4-cmd').innerText = data.svrCmds[3];
+
+      document.getElementById('cli-step1-cmd').innerText = data.cliCmds[0];
+      document.getElementById('cli-step2-cmd').innerText = data.cliCmds[1];
+      document.getElementById('cli-step3-cmd').innerText = data.cliCmds[2];
+      document.getElementById('cli-step4-cmd').innerText = data.cliCmds[3];
+    }
+
+    function toggleSim() {
+      simActive = !simActive;
+      const btn = document.getElementById('sim-btn');
+      const icon = document.getElementById('sim-icon');
+
+      if (simActive) {
+        btn.classList.add('running');
+        btn.innerHTML = '<span id="sim-icon">⏹</span> Stop Sim';
+        startPackets();
+      } else {
+        btn.classList.remove('running');
+        btn.innerHTML = '<span id="sim-icon">▶</span> Packet Sim';
+        stopPackets();
+      }
+    }
+
+    function startPackets() {
+      document.querySelectorAll('.packet-path').forEach(p => p.classList.add('active'));
+
+      let tick = 0;
+      animTimer = setInterval(() => {
+        const p1 = document.getElementById('pkt-1');
+        const p2 = document.getElementById('pkt-2');
+        p1.style.opacity = '1';
+        p2.style.opacity = '1';
+
+        const prog = (tick % 20) / 20;
+        // P1: Client -> Relay (770, 310 -> 680, 310)
+        p1.setAttribute('cx', 770 - (90 * prog));
+        p1.setAttribute('cy', 310);
+
+        // P2: Server -> Relay (310, 300 -> 400, 300)
+        p2.setAttribute('cx', 310 + (90 * prog));
+        p2.setAttribute('cy', 300);
+
+        tick++;
+      }, 50);
+    }
+
+    function stopPackets() {
+      clearInterval(animTimer);
+      document.querySelectorAll('.packet-path').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.packet-pulse').forEach(p => p.style.opacity = '0');
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tailcat Web Dashboard &amp; Cordis Architecture - Archify Visualizer</title>
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-border: #30363d;
+      --text: #c9d1d9;
+      --text-bright: #f0f6fc;
+      --text-muted: #8b949e;
+      --accent-cyan: #38bdf8;
+      --accent-green: #34d399;
+      --accent-purple: #c084fc;
+      --accent-amber: #fbbf24;
+      --accent-rose: #fb7185;
+      --accent-blue: #60a5fa;
+      --font-mono: 'JetBrains Mono', 'Fira Code', 'Courier New', monospace;
+      --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: var(--font-sans);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--surface-border);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, #059669, #0284c7);
+      color: #fff;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 4px;
+      letter-spacing: 0.05em;
+    }
+
+    h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: var(--text-bright);
+    }
+
+    .module-selector {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      max-width: 65%;
+      padding: 4px;
+    }
+
+    .mod-btn {
+      background: #21262d;
+      border: 1px solid var(--surface-border);
+      color: var(--text);
+      font-size: 11px;
+      font-family: var(--font-mono);
+      padding: 6px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s;
+    }
+
+    .mod-btn:hover, .mod-btn.active {
+      background: #30363d;
+      color: var(--text-bright);
+      border-color: var(--accent-green);
+      box-shadow: 0 0 8px rgba(52, 211, 153, 0.4);
+    }
+
+    .sim-btn {
+      background: #064e3b;
+      border: 1px solid var(--accent-green);
+      color: var(--accent-green);
+      font-size: 12px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 6px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .sim-btn:hover {
+      background: var(--accent-green);
+      color: #0f172a;
+    }
+
+    .sim-btn.running {
+      background: #3f1d24;
+      border-color: var(--accent-rose);
+      color: var(--accent-rose);
+    }
+
+    main {
+      display: flex;
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #viewport {
+      flex: 1;
+      height: 100%;
+      overflow: auto;
+      position: relative;
+      background: radial-gradient(circle at 50% 50%, #161b22 1px, transparent 1px);
+      background-size: 24px 24px;
+      padding: 30px;
+    }
+
+    svg#web-canvas {
+      min-width: 1100px;
+      min-height: 720px;
+      display: block;
+    }
+
+    /* Inspector Drawer */
+    #inspector {
+      width: 440px;
+      background: var(--surface);
+      border-left: 1px solid var(--surface-border);
+      display: flex;
+      flex-direction: column;
+      padding: 24px;
+      overflow-y: auto;
+      box-shadow: -4px 0 20px rgba(0,0,0,0.5);
+      z-index: 5;
+    }
+
+    .inspector-header {
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--surface-border);
+    }
+
+    .inspector-title {
+      font-size: 16px;
+      font-weight: 700;
+      color: var(--text-bright);
+    }
+
+    .badge-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+      flex-wrap: wrap;
+    }
+
+    .badge {
+      font-size: 11px;
+      font-family: var(--font-mono);
+      padding: 3px 8px;
+      border-radius: 4px;
+    }
+
+    .badge-route { background: #064e3b; color: #34d399; border: 1px solid #059669; }
+    .badge-tui { background: #1e3a5f; color: #60a5fa; border: 1px solid #2563eb; }
+    .badge-api { background: #3b1d54; color: #c084fc; border: 1px solid #9333ea; }
+
+    .inspector-section {
+      margin-bottom: 18px;
+    }
+
+    .inspector-section h4 {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      margin-bottom: 8px;
+    }
+
+    .code-pill {
+      background: #0d1117;
+      border: 1px solid var(--surface-border);
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--accent-cyan);
+      word-break: break-all;
+    }
+
+    .list-items {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      font-size: 13px;
+    }
+
+    .list-items li {
+      position: relative;
+      padding-left: 18px;
+      line-height: 1.4;
+    }
+
+    .list-items li::before {
+      content: '➔';
+      position: absolute;
+      left: 0;
+      color: var(--accent-green);
+      font-size: 11px;
+    }
+
+    /* SVG Elements */
+    .container-box {
+      fill: rgba(22, 27, 34, 0.8);
+      stroke: var(--surface-border);
+      stroke-width: 1.5;
+      rx: 12;
+    }
+
+    .container-header {
+      font-family: var(--font-mono);
+      font-size: 13px;
+      font-weight: 700;
+      fill: var(--text-bright);
+    }
+
+    .container-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      fill: var(--text-muted);
+    }
+
+    .flow-card {
+      fill: #1c2128;
+      stroke: var(--surface-border);
+      stroke-width: 1.5;
+      rx: 8;
+    }
+
+    .flow-title {
+      font-family: var(--font-sans);
+      font-size: 12px;
+      font-weight: 600;
+      fill: var(--text-bright);
+    }
+
+    .flow-cmd {
+      font-family: var(--font-mono);
+      font-size: 10px;
+      fill: var(--accent-cyan);
+    }
+
+    .packet-path {
+      fill: none;
+      stroke: #30363d;
+      stroke-width: 2;
+      stroke-dasharray: 6, 6;
+      transition: stroke 0.3s;
+    }
+
+    .packet-path.active {
+      stroke: var(--accent-green);
+      stroke-width: 3;
+      stroke-dasharray: none;
+    }
+
+    .packet-pulse {
+      fill: var(--accent-green);
+      opacity: 0;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <div class="brand">
+      <span class="brand-badge">ARCHIFY</span>
+      <h1>Cordis Web Dashboard &amp; REST Architecture</h1>
+    </div>
+
+    <div class="module-selector">
+      <button class="mod-btn active" onclick="loadModule('pipe')">01. Pipe</button>
+      <button class="mod-btn" onclick="loadModule('ports')">02. Ports</button>
+      <button class="mod-btn" onclick="loadModule('ssh')">03. SSH</button>
+      <button class="mod-btn" onclick="loadModule('files')">04. Files</button>
+      <button class="mod-btn" onclick="loadModule('diag')">05. Diagnostics</button>
+      <button class="mod-btn" onclick="loadModule('keys')">06. Keys</button>
+      <button class="mod-btn" onclick="loadModule('sessions')">07. Sessions</button>
+    </div>
+
+    <button id="sim-btn" class="sim-btn" onclick="toggleSim()">
+      <span id="sim-icon">▶</span> REST Flow Sim
+    </button>
+  </header>
+
+  <main>
+    <div id="viewport">
+      <svg id="web-canvas" viewBox="0 0 1080 700">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 8 5 L 0 9 z" fill="#4b5563" />
+          </marker>
+          <marker id="arrow-green" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 8 5 L 0 9 z" fill="#34d399" />
+          </marker>
+        </defs>
+
+        <!-- 1. Client Browser & Visual Proof -->
+        <g id="layer-client">
+          <rect class="container-box" x="40" y="60" width="280" height="580" style="stroke: #3b82f6;" />
+          <text class="container-header" x="60" y="95">Client Layer</text>
+          <text class="container-sub" x="60" y="115">Browser SPA &amp; Headless Chrome</text>
+
+          <g id="cli-view-card">
+            <rect class="flow-card" x="60" y="140" width="240" height="90" />
+            <text id="card-route-title" class="flow-title" x="75" y="170">Browser Dashboard SPA</text>
+            <text id="card-route-url" class="flow-cmd" x="75" y="195">http://127.0.0.1:3840/?tab=pipe</text>
+            <text class="flow-cmd" x="75" y="212" fill="#8b949e">HTML5 + Dark CSS + Tab JS</text>
+          </g>
+
+          <g id="cli-rest-card">
+            <rect class="flow-card" x="60" y="260" width="240" height="90" />
+            <text class="flow-title" x="75" y="290">REST API Poller</text>
+            <text class="flow-cmd" x="75" y="315">GET /api/sessions (1s interval)</text>
+            <text class="flow-cmd" x="75" y="332" fill="#8b949e">Syncs live process list</text>
+          </g>
+
+          <g id="cli-proof-card">
+            <rect class="flow-card" x="60" y="380" width="240" height="90" />
+            <text class="flow-title" x="75" y="410">Headless Chrome Proof</text>
+            <text class="flow-cmd" x="75" y="435">1280x800 Viewport Capture</text>
+            <text class="flow-cmd" x="75" y="452" fill="#8b949e">Output: screenshots/web/*.webp</text>
+          </g>
+        </g>
+
+        <!-- 2. Cordis Micro-Kernel & Web Server Plugin -->
+        <g id="layer-kernel">
+          <rect class="container-box" x="390" y="60" width="310" height="580" style="stroke: #10b981;" />
+          <text class="container-header" x="410" y="95">Cordis Micro-Kernel Core</text>
+          <text class="container-sub" x="410" y="115">Context &amp; Dynamic Lifecycle</text>
+
+          <g id="kernel-plugin-mgr">
+            <rect class="flow-card" x="410" y="140" width="270" height="85" />
+            <text class="flow-title" x="425" y="168">PluginManagerService</text>
+            <text class="flow-cmd" x="425" y="190">ctx.pluginManager.togglePlugin()</text>
+            <text class="flow-cmd" x="425" y="208" fill="#8b949e">Dynamic fork.dispose() lifecycles</text>
+          </g>
+
+          <g id="kernel-web-plugin">
+            <rect class="flow-card" x="410" y="250" width="270" height="95" />
+            <text class="flow-title" x="425" y="278">TailcatWebPlugin (webServer)</text>
+            <text class="flow-cmd" x="425" y="300">PortScanner.resolvePort(3840, true)</text>
+            <text class="flow-cmd" x="425" y="318">Binds Express / Static + REST</text>
+            <text class="flow-cmd" x="425" y="334" fill="#8b949e">Event: tailcat/web-started</text>
+          </g>
+
+          <g id="kernel-logger-plugin">
+            <rect class="flow-card" x="410" y="370" width="270" height="80" />
+            <text class="flow-title" x="425" y="398">FileLoggerPlugin (fileLogger)</text>
+            <text class="flow-cmd" x="425" y="420">Logs to ~/.config/.../logs/*.log</text>
+            <text class="flow-cmd" x="425" y="438" fill="#8b949e">Streams session stdout/stderr</text>
+          </g>
+
+          <g id="kernel-metrics-plugin">
+            <rect class="flow-card" x="410" y="475" width="270" height="80" />
+            <text class="flow-title" x="425" y="503">MetricsCollectorPlugin</text>
+            <text class="flow-cmd" x="425" y="525">DERP vs UDP Telemetry</text>
+            <text class="flow-cmd" x="425" y="543" fill="#8b949e">Pushes latency histograms</text>
+          </g>
+        </g>
+
+        <!-- 3. Process Supervision & Native Binaries -->
+        <g id="layer-supervisor">
+          <rect class="container-box" x="770" y="60" width="270" height="580" style="stroke: #f59e0b;" />
+          <text class="container-header" x="790" y="95">Tailcat Supervision</text>
+          <text class="container-sub" x="790" y="115">Subprocesses &amp; WireGuard</text>
+
+          <g id="sup-tailcat-svc">
+            <rect class="flow-card" x="790" y="140" width="230" height="90" />
+            <text class="flow-title" x="805" y="170">TailcatService</text>
+            <text class="flow-cmd" x="805" y="195">spawnTailcat(args)</text>
+            <text class="flow-cmd" x="805" y="212" fill="#8b949e">Tracks PID &amp; Status</text>
+          </g>
+
+          <g id="sup-active-process">
+            <rect class="flow-card" x="790" y="260" width="230" height="90" />
+            <text id="card-proc-title" class="flow-title" x="805" y="290">Managed Subprocess</text>
+            <text id="card-proc-cmd" class="flow-cmd" x="805" y="315">tailcat pipe</text>
+            <text class="flow-cmd" x="805" y="332" fill="#8b949e">Streams stdout/stderr</text>
+          </g>
+
+          <g id="sup-daemon-mgr">
+            <rect class="flow-card" x="790" y="380" width="230" height="90" />
+            <text class="flow-title" x="805" y="410">DaemonManager</text>
+            <text class="flow-cmd" x="805" y="435">PID in web-server.pid</text>
+            <text class="flow-cmd" x="805" y="452" fill="#8b949e">Detached node runner</text>
+          </g>
+        </g>
+
+        <!-- Flow Paths -->
+        <g id="flow-paths">
+          <!-- Browser to Web Server -->
+          <path id="path-cli-web" class="packet-path" d="M 300 185 L 410 295" marker-end="url(#arrow)" />
+          <!-- Web Server to TailcatService -->
+          <path id="path-web-svc" class="packet-path" d="M 680 295 L 790 185" marker-end="url(#arrow)" />
+          <!-- TailcatService to Subprocess -->
+          <path id="path-svc-proc" class="packet-path" d="M 905 230 L 905 260" marker-end="url(#arrow)" />
+          <!-- REST API Poller -->
+          <path id="path-rest-poll" class="packet-path" d="M 300 305 L 410 305" marker-end="url(#arrow)" />
+        </g>
+
+        <!-- Flow Animation Pulses -->
+        <circle id="pulse-rest-1" class="packet-pulse" r="6" />
+        <circle id="pulse-rest-2" class="packet-pulse" r="6" />
+      </svg>
+    </div>
+
+    <!-- Inspector Panel -->
+    <aside id="inspector">
+      <div class="inspector-header">
+        <h3 id="mod-title" class="inspector-title">01. Pipe &amp; Raw Stream</h3>
+        <div class="badge-row">
+          <span id="mod-route-badge" class="badge badge-route">Route: /?tab=pipe</span>
+          <span id="mod-tui-badge" class="badge badge-tui">OpenTUI: Tab 1 (PipeView)</span>
+          <span id="mod-api-badge" class="badge badge-api">API: /api/sessions</span>
+        </div>
+      </div>
+
+      <div class="inspector-section">
+        <h4>HTTP Endpoint &amp; Handlers</h4>
+        <div id="mod-endpoint" class="code-pill">GET /?tab=pipe &amp; POST /api/pipe/start</div>
+      </div>
+
+      <div class="inspector-section">
+        <h4>Core Architecture Flow</h4>
+        <ul id="mod-flow-steps" class="list-items">
+          <li><strong>Client Action</strong>: Browser user submits Pipe listener form at <code>/?tab=pipe</code>.</li>
+          <li><strong>Cordis Plugin</strong>: <code>TailcatWebPlugin</code> parses parameters and invokes <code>TailcatService.spawnPipe()</code>.</li>
+          <li><strong>Process Supervision</strong>: <code>TailcatService</code> executes <code>tailcat pipe</code>, records PID, and streams session logs.</li>
+          <li><strong>REST Polling</strong>: Browser polls <code>/api/sessions</code> to display live tunnel status and token.</li>
+        </ul>
+      </div>
+
+      <div class="inspector-section">
+        <h4>Cordis Plugin Dependencies</h4>
+        <div id="mod-deps" class="code-pill">TailcatWebPlugin · PluginManagerService · TailcatService</div>
+      </div>
+
+      <div class="inspector-section">
+        <h4>OpenTUI &amp; Web Sync</h4>
+        <div id="mod-sync-desc" style="font-size: 13px; line-height: 1.5; color: var(--text);">
+          State is unified with OpenTUI Tab 1 (Pipe / Stream). Both interfaces supervise identical background processes via <code>TailcatService</code>.
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    const moduleData = {
+      'pipe': {
+        title: '01. Pipe & Raw Stream',
+        routeBadge: 'Route: /?tab=pipe',
+        tuiBadge: 'OpenTUI: Tab 1 (PipeView)',
+        apiBadge: 'API: /api/sessions',
+        endpoint: 'GET /?tab=pipe & POST /api/pipe/start',
+        routeUrl: 'http://127.0.0.1:3840/?tab=pipe',
+        procCmd: 'tailcat pipe',
+        deps: 'TailcatWebPlugin · PluginManagerService · TailcatService',
+        flowSteps: [
+          '<strong>Client Action</strong>: Browser user submits Pipe listener form at <code>/?tab=pipe</code>.',
+          '<strong>Cordis Plugin</strong>: <code>TailcatWebPlugin</code> invokes <code>TailcatService.spawnPipe()</code>.',
+          '<strong>Process Supervision</strong>: <code>TailcatService</code> executes <code>tailcat pipe</code> and streams session logs.',
+          '<strong>REST Polling</strong>: Browser polls <code>/api/sessions</code> to display live tunnel status.'
+        ],
+        syncDesc: 'Unified with OpenTUI Tab 1 (PipeView). Processes launched in either UI appear across both dashboards.'
+      },
+      'ports': {
+        title: '02. Ports & Tunnels',
+        routeBadge: 'Route: /?tab=ports',
+        tuiBadge: 'OpenTUI: Tab 2 (PortsView)',
+        apiBadge: 'API: /api/sessions',
+        endpoint: 'GET /?tab=ports & POST /api/ports/serve',
+        routeUrl: 'http://127.0.0.1:3840/?tab=ports',
+        procCmd: 'tailcat serve-port 8080',
+        deps: 'TailcatWebPlugin · AutoPortScannerPlugin · TailcatService',
+        flowSteps: [
+          '<strong>Client Action</strong>: Browser user submits local port forward form (e.g. 8080).',
+          '<strong>Port Scanner</strong>: <code>AutoPortScannerPlugin</code> validates local port availability.',
+          '<strong>Process Supervision</strong>: <code>TailcatService</code> executes <code>tailcat serve-port 8080</code>.',
+          '<strong>REST Sync</strong>: Exposes active port token to client at <code>/api/sessions</code>.'
+        ],
+        syncDesc: 'Maps to OpenTUI Tab 2 (PortsView) for serving local HTTP/TCP sockets or dialing remote ports.'
+      },
+      'ssh': {
+        title: '03. Auth-Free SSH Server',
+        routeBadge: 'Route: /?tab=ssh',
+        tuiBadge: 'OpenTUI: Tab 3 (SSHView)',
+        apiBadge: 'API: /api/sessions',
+        endpoint: 'GET /?tab=ssh & POST /api/ssh/start',
+        routeUrl: 'http://127.0.0.1:3840/?tab=ssh',
+        procCmd: 'tailcat ssh',
+        deps: 'TailcatWebPlugin · TailcatService',
+        flowSteps: [
+          '<strong>Client Action</strong>: User starts auth-free or ACL-protected SSH daemon.',
+          '<strong>Daemon Spawn</strong>: <code>TailcatService</code> executes userspace <code>tailcat ssh</code>.',
+          '<strong>Token Delivery</strong>: Single-use connection token rendered in Web UI.',
+          '<strong>Supervision</strong>: Monitored in Active Sessions table with live PID and runtime metrics.'
+        ],
+        syncDesc: 'Unified with OpenTUI Tab 3 (SSHView). Remote client connection commands generated automatically.'
+      },
+      'files': {
+        title: '04. Files, Drop Box & SFTP',
+        routeBadge: 'Route: /?tab=files',
+        tuiBadge: 'OpenTUI: Tab 4 (FilesView)',
+        apiBadge: 'API: /api/sessions',
+        endpoint: 'GET /?tab=files & POST /api/files/serve',
+        routeUrl: 'http://127.0.0.1:3840/?tab=files',
+        procCmd: 'tailcat recv /inbox & serve files',
+        deps: 'TailcatWebPlugin · FileLoggerPlugin · TailcatService',
+        flowSteps: [
+          '<strong>Drop Box Mode</strong>: Spawns write-only receiver <code>tailcat recv &lt;directory&gt;</code>.',
+          '<strong>SFTP Mode</strong>: Spawns SFTP directory server <code>tailcat serve files &lt;path&gt;</code>.',
+          '<strong>Audit Logging</strong>: File access logged by <code>FileLoggerPlugin</code>.',
+          '<strong>REST Telemetry</strong>: File transfers reported via <code>/api/sessions</code>.'
+        ],
+        syncDesc: 'Unified with OpenTUI Tab 4 (FilesView) for drop box inbox management and SFTP directory hosting.'
+      },
+      'diag': {
+        title: '05. Network Diagnostics & Ping',
+        routeBadge: 'Route: /?tab=diag',
+        tuiBadge: 'OpenTUI: Tab 5 (DiagnosticsView)',
+        apiBadge: 'API: /api/metrics',
+        endpoint: 'GET /?tab=diag & POST /api/ping',
+        routeUrl: 'http://127.0.0.1:3840/?tab=diag',
+        procCmd: 'tailcat ping <token>',
+        deps: 'TailcatWebPlugin · MetricsCollectorPlugin · TailcatService',
+        flowSteps: [
+          '<strong>Diagnostic Probe</strong>: User triggers ping latency test against remote token.',
+          '<strong>Metrics Tracker</strong>: <code>MetricsCollectorPlugin</code> calculates RTT & DERP path upgrades.',
+          '<strong>JSON Stream</strong>: Real-time telemetry streamed to Web charts and OpenTUI.',
+          '<strong>Token Parser</strong>: Decodes token payload to JSON format.'
+        ],
+        syncDesc: 'Unified with OpenTUI Tab 5 (DiagnosticsView) with live histogram and token parser.'
+      },
+      'keys': {
+        title: '06. Key Management & Identities',
+        routeBadge: 'Route: /?tab=keys',
+        tuiBadge: 'OpenTUI: Tab 6 (KeysView)',
+        apiBadge: 'API: /api/keys',
+        endpoint: 'GET /?tab=keys & POST /api/keys/generate',
+        routeUrl: 'http://127.0.0.1:3840/?tab=keys',
+        procCmd: 'tailcat genkey',
+        deps: 'TailcatWebPlugin · DaemonManager · TailcatService',
+        flowSteps: [
+          '<strong>Key Generation</strong>: Spawns <code>tailcat genkey</code> to create WireGuard keypair.',
+          '<strong>Config Persistence</strong>: Saved to <code>~/.config/tailcat-tui/config.json</code>.',
+          '<strong>Identity Assignment</strong>: Keys can be assigned to server daemons or client dials.',
+          '<strong>ACL Management</strong>: Defines <code>--allow=nodekey:...</code> policies.'
+        ],
+        syncDesc: 'Unified with OpenTUI Tab 6 (KeysView) and persistent config storage.'
+      },
+      'sessions': {
+        title: '07. Active Sessions Supervisor',
+        routeBadge: 'Route: /?tab=sessions',
+        tuiBadge: 'OpenTUI: Tab 7 (SessionsView)',
+        apiBadge: 'API: /api/sessions',
+        endpoint: 'GET /?tab=sessions & DELETE /api/sessions/:id',
+        routeUrl: 'http://127.0.0.1:3840/?tab=sessions',
+        procCmd: 'TailcatService Process Supervisor Pool',
+        deps: 'TailcatWebPlugin · PluginManagerService · TailcatService',
+        flowSteps: [
+          '<strong>Process Table</strong>: Lists all active sessions, PIDs, tokens, and uptime.',
+          '<strong>Log Streamer</strong>: Streams live stdout/stderr ring buffers from each process.',
+          '<strong>Lifecycle Actions</strong>: Provides instant Kill (SIGTERM/SIGKILL) and Restart buttons.',
+          '<strong>State Broadcast</strong>: Synchronizes with OpenTUI Sessions view.'
+        ],
+        syncDesc: 'Direct mirror of OpenTUI Tab 7 (SessionsView) and hotkey `[k]` termination.'
+      }
+    };
+
+    let activeMod = 'pipe';
+    let isSimRunning = false;
+    let simTimer = null;
+
+    function loadModule(modKey) {
+      activeMod = modKey;
+      const data = moduleData[modKey];
+      if (!data) return;
+
+      // Update buttons
+      document.querySelectorAll('.mod-btn').forEach(btn => btn.classList.remove('active'));
+      event.target.classList.add('active');
+
+      // Update Inspector
+      document.getElementById('mod-title').innerText = data.title;
+      document.getElementById('mod-route-badge').innerText = data.routeBadge;
+      document.getElementById('mod-tui-badge').innerText = data.tuiBadge;
+      document.getElementById('mod-api-badge').innerText = data.apiBadge;
+      document.getElementById('mod-endpoint').innerText = data.endpoint;
+      document.getElementById('card-route-url').innerText = data.routeUrl;
+      document.getElementById('card-proc-cmd').innerText = data.procCmd;
+      document.getElementById('mod-deps').innerText = data.deps;
+      document.getElementById('mod-sync-desc').innerText = data.syncDesc;
+
+      const stepsEl = document.getElementById('mod-flow-steps');
+      stepsEl.innerHTML = '';
+      data.flowSteps.forEach(s => {
+        const li = document.createElement('li');
+        li.innerHTML = s;
+        stepsEl.appendChild(li);
+      });
+    }
+
+    function toggleSim() {
+      isSimRunning = !isSimRunning;
+      const btn = document.getElementById('sim-btn');
+      const icon = document.getElementById('sim-icon');
+
+      if (isSimRunning) {
+        btn.classList.add('running');
+        btn.innerHTML = '<span id="sim-icon">⏹</span> Stop Sim';
+        startRestAnimation();
+      } else {
+        btn.classList.remove('running');
+        btn.innerHTML = '<span id="sim-icon">▶</span> REST Flow Sim';
+        stopRestAnimation();
+      }
+    }
+
+    function startRestAnimation() {
+      document.querySelectorAll('.packet-path').forEach(p => p.classList.add('active'));
+
+      let tick = 0;
+      simTimer = setInterval(() => {
+        const p1 = document.getElementById('pulse-rest-1');
+        const p2 = document.getElementById('pulse-rest-2');
+        p1.style.opacity = '1';
+        p2.style.opacity = '1';
+
+        const prog = (tick % 20) / 20;
+        // P1: Client -> WebPlugin (300, 185 -> 410, 295)
+        p1.setAttribute('cx', 300 + (110 * prog));
+        p1.setAttribute('cy', 185 + (110 * prog));
+
+        // P2: WebPlugin -> TailcatService (680, 295 -> 790, 185)
+        p2.setAttribute('cx', 680 + (110 * prog));
+        p2.setAttribute('cy', 295 - (110 * prog));
+
+        tick++;
+      }, 50);
+    }
+
+    function stopRestAnimation() {
+      clearInterval(simTimer);
+      document.querySelectorAll('.packet-path').forEach(p => p.classList.remove('active'));
+      document.querySelectorAll('.packet-pulse').forEach(p => p.style.opacity = '0');
+    }
+  </script>
+</body>
+</html>

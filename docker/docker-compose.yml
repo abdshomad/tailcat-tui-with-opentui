@@ -1,0 +1,54 @@
+services:
+  derper:
+    build:
+      context: ..
+      dockerfile: docker/derper/Dockerfile.derper
+    container_name: tailcat-sim-derper
+    networks:
+      - tailcat-net
+    ports:
+      - "3340:3340"
+      - "3341:3341"
+      - "3478:3478/udp"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3341/healthz"]
+      interval: 2s
+      timeout: 2s
+      retries: 10
+
+  node-server:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.node
+    container_name: tailcat-sim-server
+    networks:
+      - tailcat-net
+    volumes:
+      - tailcat-exchange:/var/run/tailcat-exchange
+    environment:
+      - DERP_MAP_URL=http://derper:3341/derpmap.json
+    depends_on:
+      derper:
+        condition: service_healthy
+
+  node-client:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.node
+    container_name: tailcat-sim-client
+    networks:
+      - tailcat-net
+    volumes:
+      - tailcat-exchange:/var/run/tailcat-exchange
+    environment:
+      - DERP_MAP_URL=http://derper:3341/derpmap.json
+    depends_on:
+      derper:
+        condition: service_healthy
+
+volumes:
+  tailcat-exchange:
+
+networks:
+  tailcat-net:
+    driver: bridge

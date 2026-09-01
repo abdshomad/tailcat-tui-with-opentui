@@ -1,0 +1,11 @@
+node_modules/
+dist/
+bin/tailcat
+.secrets
+*.log
+.gitmodules
+tailcat/
+opentui/
+autonomous-coding-agents/
+cordis/
+
